@@ -456,6 +456,11 @@ main{width:100%;max-width:1560px;margin:0 auto;padding:30px clamp(16px,3.5vw,48p
 .table{width:100%;border-collapse:collapse;font-size:11px}
 .table th{text-align:left;font:10px var(--mono);letter-spacing:1.5px;color:var(--cyan);padding:12px 10px;border-bottom:1px solid var(--line)}
 .table td{padding:14px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+.table td.task-status-cell{padding-top:11px;white-space:nowrap}
+.table td.task-status-cell .rubber-segment{vertical-align:top}
+.table td.task-act-cell{padding-top:11px;white-space:nowrap}
+.table td.task-act-cell .task-acts{display:flex;gap:6px;align-items:center}
+.table td.task-empty{color:var(--dim);font:10px var(--mono);letter-spacing:1px;padding:22px 10px}
 .table tr:hover td{background:rgba(108,229,232,0.04)}
 
 /* Forms & Glitch Modals */
@@ -1054,9 +1059,25 @@ body[data-theme="batman"]{
 
 .canvas-wrapper .panel-left { flex: 1.2; display: flex; flex-direction: column; }
 
-.canvas-wrapper .panel-right { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+.canvas-wrapper .panel-right { flex: 1; display: flex; flex-direction: column; gap: 13px; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: thin; scrollbar-color: var(--acc-soft) transparent; }
+.canvas-wrapper .panel-right::-webkit-scrollbar { width: 4px; }
+.canvas-wrapper .panel-right::-webkit-scrollbar-thumb { background: var(--acc-soft); border-radius: 4px; }
+.canvas-wrapper .panel-right::-webkit-scrollbar-track { background: transparent; }
 
-.canvas-wrapper .panel-right .panel { flex: 1; }
+/* 面板按内容高度排布，不再强行三等分（旧规则会把核心状态的「威胁等级」裁掉） */
+.canvas-wrapper .panel-right .panel { flex: 0 0 auto; }
+
+/* 核心状态：优先完整显示，永不压缩 */
+.canvas-wrapper .panel-right > .panel:first-child { padding-bottom: 15px; }
+.canvas-wrapper .panel-right > .panel:first-child .panel-title { margin-bottom: 10px; padding-bottom: 7px; }
+
+/* 巴别塔：只有一行信息，压到最薄 */
+.canvas-wrapper .panel-right > .panel:nth-child(2) { padding: 10px 18px 12px; }
+.canvas-wrapper .panel-right > .panel:nth-child(2) .panel-title { margin-bottom: 4px; padding-bottom: 5px; }
+
+/* 待处理案件：吸收剩余空间 */
+.canvas-wrapper .panel-right > .panel:nth-child(3) { flex: 1 1 auto; min-height: 0; }
 
 .canvas-wrapper .tiltable { transition: transform 0.25s ease-out, border-color 0.3s; transform-style: preserve-3d; will-change: transform; }
 
@@ -1090,7 +1111,13 @@ body[data-theme="batman"]{
 
 @media (max-width: 720px) {.canvas-wrapper .main-body { flex-direction: column; }
 
-.canvas-wrapper .panel-right { flex-direction: row; }
+.canvas-wrapper .panel-right { flex-direction: row; overflow-x: auto; overflow-y: hidden; gap: 10px; }
+
+.canvas-wrapper .panel-right .panel,
+.canvas-wrapper .panel-right > .panel:first-child,
+.canvas-wrapper .panel-right > .panel:nth-child(3) { flex: 1 1 0; min-width: 0; }
+
+.canvas-wrapper .panel-right > .panel:nth-child(2) { padding: 10px 12px 12px; }
 
 .canvas-wrapper #step-main { padding: 18px; }
 
@@ -1957,16 +1984,16 @@ body[data-theme="liese"] .glow-card > .rb-glow{--bg-cone:38}
   <div class="topright">
    <div class="rubber-segment" role="radiogroup" aria-label="语言 / Language" id="langToggle" data-rubber="lang" data-equal
         style="--rs-radius:6px;--rs-inset:2px;--rs-thumb-radius:4px;--rs-track:rgba(255,255,255,.06);--rs-thumb:var(--accent);--rs-ink:var(--muted);--rs-ink-active:#0b0710;--rs-min:34px;--rs-pad:9px">
-    <button type="button" role="radio" class="rubber-segment__item" data-rs-value="zh" aria-checked="true" title="中文">中</button>
-    <button type="button" role="radio" class="rubber-segment__item" data-rs-value="en" aria-checked="false" title="English">EN</button>
+    <button type="button" role="radio" class="rubber-segment__item" data-rs-value="zh" aria-checked="false" title="中文">中</button>
+    <button type="button" role="radio" class="rubber-segment__item" data-rs-value="en" aria-checked="true" title="English">EN</button>
     <div class="rubber-segment__thumb" aria-hidden="true">
      <span class="rubber-segment__item rubber-segment__copy">中</span>
      <span class="rubber-segment__item rubber-segment__copy">EN</span>
     </div>
    </div>
-   <button class="ghost sm" id="photoBtn" title="更换所有照片（本地上传）" onclick="photoManager()">照片</button>
+   <button class="ghost sm" id="photoBtn" title="Replace photos (local upload)" onclick="photoManager()">Photos</button>
    <span class="session-label"><i class="online-dot"></i><b id="sessionName" class="gold">Pralinet</b></span>
-   <button class="ghost sm" id="switchUser">切换身份</button>
+   <button class="ghost sm" id="switchUser">Switch User</button>
   </div>
  </header>
  <main id="content"></main>
@@ -3068,9 +3095,10 @@ function log(action,detail=''){
  state.logs.unshift({time:nyTime(),actor:members[current].en,action,detail});
  state.logs=state.logs.slice(0,100);save();
 }
-function toast(t){
+function trSafe(s){try{return translateText(String(s==null?'':s))}catch(e){return String(s==null?'':s)}}
+function toast(msg){
  const r=document.getElementById('toastRoot');
- r.innerHTML=`<div class="toast">▸ ${esc(t)}</div>`;
+ r.innerHTML=`<div class="toast">▸ ${esc(trSafe(msg))}</div>`;
  setTimeout(()=>r.innerHTML='',2600);
 }
 document.body.setAttribute('data-theme', 'lani');
@@ -3996,25 +4024,28 @@ const IMG={hero:'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgwK
 const HUB_IMG_DEFAULT=[IMG.street,IMG.hero,IMG.lab,IMG.city,IMG.factory,IMG.lab,IMG.factory,IMG.hero];
 
 const PHOTO_SLOTS=[
-  {key:'hero',label:'主控台 · 主视觉 HERO',max:1900},
-  {key:'case-A-2049',label:'卷宗 A-2049 · 化工厂事故',max:1500},
-  {key:'case-B-1177',label:'卷宗 B-1177 · 失踪人员',max:1500},
-  {key:'case-C-3301',label:'卷宗 C-3301 · 未编号实验',max:1500},
-  {key:'hub-0',label:'折叠画廊 01 · 成员档案',max:1400},
-  {key:'hub-1',label:'折叠画廊 02 · 案件卷宗',max:1400},
-  {key:'hub-2',label:'折叠画廊 03 · 证据关系网',max:1400},
-  {key:'hub-3',label:'折叠画廊 04 · 战术地图',max:1400},
-  {key:'hub-4',label:'折叠画廊 05 · 加密通讯',max:1400},
-  {key:'hub-5',label:'折叠画廊 06 · 任务清单',max:1400},
-  {key:'hub-6',label:'折叠画廊 07 · 系统终端',max:1400},
-  {key:'hub-7',label:'折叠画廊 Ω · 系统管理',max:1400},
-  {key:'mem-lani',label:'成员 · Pralinet',max:1100},
-  {key:'mem-yuanzhi',label:'成员 · Polaris',max:1100},
-  {key:'mem-liese',label:'成员 · FizzPop',max:1100}
+  {key:'hero',label:'主控台 · 主视觉 HERO',en:'Command Deck · Hero visual',max:1900},
+  {key:'case-A-2049',label:'卷宗 A-2049 · 化工厂事故',en:'Case A-2049 · Plant incident',max:1500},
+  {key:'case-B-1177',label:'卷宗 B-1177 · 失踪人员',en:'Case B-1177 · Missing persons',max:1500},
+  {key:'case-C-3301',label:'卷宗 C-3301 · 未编号实验',en:'Case C-3301 · Unnumbered experiment',max:1500},
+  {key:'hub-0',label:'折叠画廊 01 · 成员档案',en:'Gallery 01 · Personnel',max:1400},
+  {key:'hub-1',label:'折叠画廊 02 · 案件卷宗',en:'Gallery 02 · Case Files',max:1400},
+  {key:'hub-2',label:'折叠画廊 03 · 证据关系网',en:'Gallery 03 · Evidence Network',max:1400},
+  {key:'hub-3',label:'折叠画廊 04 · 战术地图',en:'Gallery 04 · Tactical Map',max:1400},
+  {key:'hub-4',label:'折叠画廊 05 · 加密通讯',en:'Gallery 05 · Comms',max:1400},
+  {key:'hub-5',label:'折叠画廊 06 · 任务清单',en:'Gallery 06 · Tasks',max:1400},
+  {key:'hub-6',label:'折叠画廊 07 · 系统终端',en:'Gallery 07 · Terminal',max:1400},
+  {key:'hub-7',label:'折叠画廊 Ω · 系统管理',en:'Gallery Ω · Admin',max:1400},
+  {key:'mem-lani',label:'成员 · Pralinet',en:'Member · Pralinet',max:1100},
+  {key:'mem-yuanzhi',label:'成员 · Polaris',en:'Member · Polaris',max:1100},
+  {key:'mem-liese',label:'成员 · FizzPop',en:'Member · FizzPop',max:1100}
 ];
 
 const PHOTO={data:{},thumbs:{},db:null,ready:false,volatile:false,backend:''};
 const PHOTO_THUMB='thumb:';
+/* 照片模块文案：中 / EN */
+function PL(zh,en){let e=false;try{e=(LANG==='en')}catch(err){e=false}return e?(en==null?zh:en):zh}
+function slotLabel(key){const s=photoSlot(key);return s?PL(s.label,s.en):key}
 
 function memAvatarAttrs(id){
   const u=memPic(id);
@@ -4208,9 +4239,10 @@ function photoPick(key){
 }
 function photoIngest(file,key){
   const slot=photoSlot(key)||{max:1600,label:key};
-  if(file.size>24*1024*1024){toast('图片过大（上限 24MB）');return}
+  const slab=slotLabel(key);
+  if(file.size>24*1024*1024){toast(PL('图片过大（上限 24MB）','Image too large (24 MB max)'));return}
   const mem=key.indexOf('mem-')===0;
-  toast('正在处理照片 · '+(slot.label||key));
+  toast(PL('正在处理照片 · ','Processing photo · ')+slab);
   Promise.all([
     photoNormalize(file,slot.max,mem?0.9:0.86),
     photoNormalize(file,300,0.7)
@@ -4223,11 +4255,11 @@ function photoIngest(file,key){
       photoWrite(PHOTO_THUMB+key,thumb)
     ]).catch(()=>{});
   }).then(()=>{
-    if(PHOTO.volatile)toast('照片已替换，但浏览器拒绝本地存储，刷新后会还原');
-    else{log('更换照片',slot.label||key);toast('照片已更新 · '+(slot.label||key))}
+    if(PHOTO.volatile)toast(PL('照片已替换，但浏览器拒绝本地存储，刷新后会还原','Photo replaced, but the browser blocked local storage — it will revert on refresh'));
+    else{log('更换照片',slab);toast(PL('照片已更新 · ','Photo updated · ')+slab)}
     photoSyncManager();
   }).catch(e=>{
-    toast('照片替换失败：'+((e&&e.message)||'未知错误'));
+    toast(PL('照片替换失败：','Photo replace failed: ')+((e&&e.message)||PL('未知错误','unknown error')));
   });
 }
 function photoReset(key){
@@ -4237,11 +4269,11 @@ function photoReset(key){
   photoSyncManager();
   photoWrite(key,null).catch(()=>{});
   photoWrite(PHOTO_THUMB+key,null).catch(()=>{});
-  toast('已恢复默认照片');
+  toast(PL('已恢复默认照片','Default photo restored'));
 }
 function photoResetAll(){
   const keys=Object.keys(PHOTO.data);
-  if(!keys.length){toast('当前没有自定义照片');return}
+  if(!keys.length){toast(PL('当前没有自定义照片','No custom photos yet'));return}
   PHOTO.data={};
   PHOTO.thumbs={};
   keys.forEach(k=>{
@@ -4251,8 +4283,8 @@ function photoResetAll(){
   PHOTO.volatile=false;
   render();
   photoSyncManager();
-  log('恢复全部默认照片',keys.length+' 处');
-  toast('已恢复全部 '+keys.length+' 处默认照片');
+  log('恢复全部默认照片',keys.length+PL(' 处',' slots'));
+  toast(PL('已恢复全部 ','Restored all ')+keys.length+PL(' 处默认照片',' slots to defaults'));
 }
 
 /* ---------- 拖拽落图 ---------- */
@@ -4288,42 +4320,38 @@ function photoThumbHTML(key){
   }
   return '<div class="pm-thumb" style="background-image:url(\''+url+'\')">'+(own?'<span class="pm-flag">CUSTOM</span>':'')+'</div>';
 }
+function pmCardHTML(s){
+  const own=hasOwnPhoto(s.key);
+  return '<div class="pm-card'+(own?' is-custom':'')+'">'
+    +photoThumbHTML(s.key)
+    +'<div class="pm-label">'+PL(s.label,s.en)+'</div>'
+    +'<div class="pm-acts">'
+    +'<button type="button" onclick="photoPick(\''+s.key+'\')">'+PL('上传','Upload')+'</button>'
+    +'<button type="button" class="warn" onclick="photoReset(\''+s.key+'\')"'+(own?'':' disabled')+'>'+PL('恢复','Reset')+'</button>'
+    +'</div></div>';
+}
 function photoManager(){
-  const grid=PHOTO_SLOTS.map(s=>{
-    const own=hasOwnPhoto(s.key);
-    return '<div class="pm-card'+(own?' is-custom':'')+'">'
-      +photoThumbHTML(s.key)
-      +'<div class="pm-label">'+s.label+'</div>'
-      +'<div class="pm-acts">'
-      +'<button type="button" onclick="photoPick(\''+s.key+'\')">上传</button>'
-      +'<button type="button" class="warn" onclick="photoReset(\''+s.key+'\')"'+(own?'':' disabled')+'>恢复</button>'
-      +'</div></div>';
-  }).join('');
   const count=Object.keys(PHOTO.data).length;
-  showModal('<div class="modal-head"><h3>照片管理 / PHOTO SLOTS</h3><button class="close" onclick="closeModal()">×</button></div>'
+  const note=PL(
+    '上传的照片会压缩后保存在本机浏览器（IndexedDB），不会写入 HTML 文件，也不会离开这台电脑。<br>也可以直接把图片拖到对应区域上完成替换。当前已自定义 ',
+    'Uploaded photos are compressed and kept in this browser\u2019s IndexedDB. Nothing is written into the HTML file and nothing leaves this machine.<br>You can also drag an image straight onto any slot. Customised: ');
+  showModal('<div class="modal-head"><h3>'+PL('照片管理 / PHOTO SLOTS','PHOTO SLOTS')+'</h3><button class="close" onclick="closeModal()">×</button></div>'
     +'<div class="pm-wrap">'
-    +'<p class="pm-note">上传的照片会压缩后保存在本机浏览器（IndexedDB），不会写入 HTML 文件，也不会离开这台电脑。<br>'
-    +'也可以直接把图片拖到对应区域上完成替换。当前已自定义 <b style="color:var(--accent-bright)">'+count+'</b> / '+PHOTO_SLOTS.length+' 处。</p>'
-    +'<div class="pm-grid" id="photoManagerGrid" style="max-height:52vh;overflow:auto;padding-right:4px">'+grid+'</div>'
-    +'<div class="pm-foot"><span class="pm-note">'+(PHOTO.volatile?'⚠ 本地存储不可用，照片仅在本次会话有效':'✔ 本地存储正常')+'</span>'
-    +'<span style="display:flex;gap:8px"><button type="button" class="ghost sm" onclick="photoResetAll()">全部恢复默认</button>'
-    +'<button type="button" class="primary" onclick="closeModal()">完成</button></span></div>'
+    +'<p class="pm-note">'+note
+    +'<b style="color:var(--accent-bright)">'+count+'</b> / '+PHOTO_SLOTS.length+PL(' 处。',' slots.')+'</p>'
+    +'<div class="pm-grid" id="photoManagerGrid" style="max-height:52vh;overflow:auto;padding-right:4px">'+PHOTO_SLOTS.map(pmCardHTML).join('')+'</div>'
+    +'<div class="pm-foot"><span class="pm-note">'+(PHOTO.volatile
+        ?PL('⚠ 本地存储不可用，照片仅在本次会话有效','⚠ Local storage unavailable — photos last only this session')
+        :PL('✔ 本地存储正常','✔ Local storage OK'))+'</span>'
+    +'<span style="display:flex;gap:8px"><button type="button" class="ghost sm" onclick="photoResetAll()">'+PL('全部恢复默认','Reset all')+'</button>'
+    +'<button type="button" class="primary" onclick="closeModal()">'+PL('完成','Done')+'</button></span></div>'
     +'</div>');
 }
 function photoSyncManager(){
   const grid=document.getElementById('photoManagerGrid');
   if(!grid)return;
   const sc=grid.scrollTop;
-  grid.innerHTML=PHOTO_SLOTS.map(s=>{
-    const own=hasOwnPhoto(s.key);
-    return '<div class="pm-card'+(own?' is-custom':'')+'">'
-      +photoThumbHTML(s.key)
-      +'<div class="pm-label">'+s.label+'</div>'
-      +'<div class="pm-acts">'
-      +'<button type="button" onclick="photoPick(\''+s.key+'\')">上传</button>'
-      +'<button type="button" class="warn" onclick="photoReset(\''+s.key+'\')"'+(own?'':' disabled')+'>恢复</button>'
-      +'</div></div>';
-  }).join('');
+  grid.innerHTML=PHOTO_SLOTS.map(pmCardHTML).join('');
   grid.scrollTop=sc;
 }
 
@@ -4544,8 +4572,8 @@ function bindHubCards(root){
 /* =========================================================
    LANGUAGE — 中 / EN 全站切换
    ========================================================= */
-let LANG='zh';
-try{LANG=localStorage.getItem('batcomputer_lang_v1')||'zh'}catch(e){}
+let LANG='en';
+try{LANG=localStorage.getItem('batcomputer_lang_v2')||'en'}catch(e){}
 const DICT={
 '系统管理员 / ARCHITECT':'System Architect / ADMIN','检察官 / LEGAL ACCESS':'Prosecutor / LEGAL ACCESS','调查成员 / RESTRICTED':'Investigator / RESTRICTED',
 '系统的设计者与维护者。负责资金、产权、资源网络与调查路径的统筹。她习惯先看一栋建筑的产权链，再问里面发生过什么。':'Designer and maintainer of the system. She coordinates funding, property, networks and investigation paths — reading a building\u2019s chain of title before asking what happened inside.',
@@ -4587,21 +4615,52 @@ const DICT={
 '成员档案已保存':'Profile saved','卷宗已保存':'Case saved','卷宗已删除':'Case deleted','记录已写入':'Entry logged','操作记录已导出':'Activity log exported','备份文件已导出':'Backup exported','系统就绪':'System ready','权限不足':'Insufficient clearance','节点同步中':'Syncing nodes','确定删除卷宗「':'Delete case "','确定删除地点「':'Delete location "','」？':'"?','导出':'Export','重置':'Reset','刷新':'Refresh','清空':'Clear',
 '身份':'Identity','时间':'Time','摘要':'Summary','记录内容':'Entry content','写入记录':'Log entry','未补充调查备注':'No notes yet','重点':'Priority','可选':'optional','暂无关联':'No links','暂无地点标记':'No pins yet','标记色标':'Pin color',
 '输入信道解密密钥以接入内部通讯网络':'Enter the channel decryption key to access the internal comms network','解密接入':'Decrypt & connect','密钥校验失败 · 剩余尝试':'KEY MISMATCH · ATTEMPTS LEFT','信道锁定中':'CHANNEL LOCKED','信道已锁定 · 10 秒后重试':'Channel locked — retry in 10s','信道已解密 · 加密通讯已接入':'Channel decrypted · encrypted comms connected','拖拽旋转':'drag to rotate','加密通讯 · 信道解锁':'Encrypted Comms · Channel Unlock','+ 新建':'+ NEW','新建加密频道':'New encrypted channel','NEW ENCRYPTED CHANNEL // HANDOFF':'NEW ENCRYPTED CHANNEL // HANDOFF','频道名称':'Channel name','频道说明':'Channel notes','频道标记':'Channel tag','首位发言人':'First speaker','建立频道':'Create channel','请填写频道名称':'Channel name required','频道已建立 · 信道已加密':'Channel created · link encrypted','频道已删除':'Channel deleted','至少保留一个频道':'Keep at least one channel','删除频道':'Delete channel','删除卷宗':'Delete case','已删除':'Deleted','删除此节点':'Delete node','已移除':'Removed','恢复演示数据':'Restore demo data','已重置':'Reset done','长按删除':'Hold to delete','点击翻面 · 拖动旋转':'Click to flip · drag to rotate','RELATED RECORDS / 关联卷宗':'RELATED RECORDS','NOTE':'NOTE','档案卡支持点击翻面与拖动旋转。成员名称固定，不可修改；身份摘要与专长可在「编辑档案」中更新。':'The file card flips on click and turns by drag. Member names are fixed; identity and specialty can be edited via Edit profile.','频道「':'Channel "','」已建立，等待第一次通讯。':'" created — waiting for the first transmission.','IDENTITY SHEET / ':'IDENTITY SHEET / '}
+/* —— 照片 / 折叠画廊 / 地图 / 任务等新增区块的补词 —— */
+Object.assign(DICT,{
+'编辑任务':'Edit task','删除任务':'Delete task','任务已更新':'Task updated','任务已创建':'Task created','任务已删除':'Task deleted','任务不存在':'Task not found',
+'暂无任务 · 点右上角「新建任务」开始':'No tasks yet — use New task in the top right to start','暂无任务':'No tasks yet',
+'更换照片':'Replace photo','更换封面':'Replace cover','更换图片':'Replace image','更换所有照片（本地上传）':'Replace photos (local upload)',
+'照片':'Photos','照片管理 / PHOTO SLOTS':'PHOTO SLOTS','上传':'Upload','恢复':'Reset','全部恢复默认':'Reset all',
+'任务状态':'Task status','状态':'Status','操作记录':'Activity log','成员':'Member','编辑':'Edit',
+'旧化工厂':'Old chemical plant','A-2049 · 事故现场':'A-2049 · Incident scene','补充承包商法人变更线索':'Added the contractor ownership lead',
+'地图为虚构哥谭调查界面的空间示意，不代表真实地理坐标。':'The map is a spatial schematic of the fictional Gotham investigation board, not real geography.',
+'本原型固定三名身份，不提供注册、邀请第四名用户或成员扩容入口。':'This prototype has three fixed identities. There is no signup, no fourth seat and no way to expand the roster.',
+'图片过大（上限 24MB）':'Image too large (24 MB max)','正在处理照片 · ':'Processing photo · ','照片已更新 · ':'Photo updated · ',
+'照片替换失败：':'Photo replace failed: ','未知错误':'unknown error','已恢复默认照片':'Default photo restored',
+'当前没有自定义照片':'No custom photos yet','已恢复全部默认照片':'Restore all defaults',' 处默认照片':' slots to defaults',
+'⚠ 本地存储不可用，照片仅在本次会话有效':'⚠ Local storage unavailable — photos last only this session','✔ 本地存储正常':'✔ Local storage OK',
+'刷新后会还原':'it will revert on refresh','照片已替换，但浏览器拒绝本地存储，刷新后会还原':'Photo replaced, but the browser blocked local storage — it will revert on refresh'
+});
 function t(s){if(LANG!=='en'||s==null)return s;const v=DICT[s];return v!==undefined?v:s}
+function tl(s){const v=DICT[s];return LANG==='en'&&v!==undefined?v:s}
+/* 分段控件用短标签，避免英文撑宽表格列 */
+const TASK_STATUS_EN={'待处理':'Pending','进行中':'Active','已完成':'Done','受限':'Restricted'};
+function taskSegLabel(s){return LANG==='en'?(TASK_STATUS_EN[s]||s):s}
 let DICT_RE=null;
 function translateText(s){
  if(LANG!=='en')return s;
  if(!DICT_RE){DICT_RE=new RegExp('('+Object.keys(DICT).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).sort((a,b)=>b.length-a.length).join('|')+')','g')}
  return s.replace(DICT_RE,m=>DICT[m]);
 }
+const TR_ATTRS=['title','placeholder','aria-label','alt','data-text'];
 function translateDOM(root){
  if(!root||LANG!=='en')return;
  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
  let n;while(n=w.nextNode()){if(n.nodeValue&&/[\u4e00-\u9fff]/.test(n.nodeValue))n.nodeValue=translateText(n.nodeValue)}
+ let els=[];
+ try{els=root.querySelectorAll?[...root.querySelectorAll('*')]:[]}catch(e){els=[]}
+ for(let i=0;i<els.length;i++){
+  const el=els[i];
+  for(let a=0;a<TR_ATTRS.length;a++){
+   const k=TR_ATTRS[a];
+   const v=el.getAttribute&&el.getAttribute(k);
+   if(v&&/[\u4e00-\u9fff]/.test(v)){try{el.setAttribute(k,translateText(v))}catch(e){}}
+  }
+ }
 }
 function toggleLang(){
  LANG=LANG==='zh'?'en':'zh';
- try{localStorage.setItem('batcomputer_lang_v1',LANG)}catch(e){}
+ try{localStorage.setItem('batcomputer_lang_v2',LANG)}catch(e){}
  applyLang();
 }
 function applyLang(withRender=true){
@@ -4609,12 +4668,15 @@ function applyLang(withRender=true){
  if(seg&&seg._rsSelect)seg._rsSelect(LANG);
  const lbl={switchUser:['切换身份','Switch User']};
  Object.keys(lbl).forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=LANG==='zh'?lbl[id][0]:lbl[id][1]});
+ const pb=document.getElementById('photoBtn');
+ if(pb){pb.textContent=LANG==='zh'?'照片':'Photos';try{pb.setAttribute('title',LANG==='zh'?'更换所有照片（本地上传）':'Replace photos (local upload)')}catch(e){}}
+ if(document.getElementById('photoManagerGrid')){try{photoManager()}catch(e){}}
  if(withRender&&document.getElementById('app')&&!document.getElementById('app').classList.contains('hidden'))render();
 }
 document.addEventListener('rb:change',function(e){
  if(!e.detail||e.detail.id!=='lang')return;
  LANG=e.detail.value;
- try{localStorage.setItem('batcomputer_lang_v1',LANG)}catch(err){}
+ try{localStorage.setItem('batcomputer_lang_v2',LANG)}catch(err){}
  applyLang();
 });
 const _langBtn=document.getElementById('langBtn');
@@ -5255,27 +5317,60 @@ function sendChatMessage(){
    ========================================================= */
 function tasks(){
  return head('TASKS / 07','任务管理','',`<button class="primary" onclick="taskModal()">新建任务</button>`)
- +`<div class="panel holo-card stagger-item" style="overflow:auto"><table class="table"><thead><tr><th>任务</th><th>负责人</th><th>截止日期</th><th>状态</th><th>操作</th></tr></thead><tbody>
- ${state.tasks.map(t=>`<tr><td><b>${esc(t.title)}</b><div class="muted">${esc(t.detail)}</div></td><td>${members[t.owner].en}</td><td class="mono">${esc(t.due)}</td><td><span class="tag ${t.status==='进行中'?'cytag':t.status==='受限'?'redtag':''}">${esc(t.status)}</span></td><td><button class="ghost sm" onclick="cycleTask(${t.id})">更新状态</button></td></tr>`).join('')}
+ +`<div class="panel holo-card stagger-item" style="overflow:auto"><table class="table"><thead><tr><th>任务</th><th>负责人</th><th>截止日期</th><th>状态</th><th>更新状态</th><th>操作</th></tr></thead><tbody>
+ ${state.tasks.map(tk=>`<tr data-task-row="${tk.id}"><td><b>${esc(tk.title)}</b><div class="muted">${esc(tk.detail)}</div></td><td>${members[tk.owner]?members[tk.owner].en:tk.owner}</td><td class="mono">${esc(tk.due)}</td><td><span class="tag ${taskTagCls(tk.status)}">${esc(taskSegLabel(tk.status))}</span></td><td class="task-status-cell">${rubberSegmentHTML('task-'+tk.id,TASK_STATUS.map(s=>({value:s,label:taskSegLabel(s)})),tk.status,{radius:5,inset:2,h:26,font:10,pad:8,min:30,drag:true,aria:'任务状态',track:'rgba(255,255,255,.05)',thumb:'var(--accent)',ink:'var(--muted)',inkActive:'#0b0710'})}</td><td class="task-act-cell"><div class="task-acts"><button class="ghost sm" onclick="taskModal('${tk.id}')">编辑</button>${holdBtn({action:'deleteTask',arg:tk.id,label:'删除',done:'已删除',size:'xs'})}</div></td></tr>`).join('')}
+ ${state.tasks.length?'':'<tr><td colspan="6" class="task-empty">暂无任务 · 点右上角「新建任务」开始</td></tr>'}
  </tbody></table></div>`;
 }
-function taskModal(){
- showModal(`<div class="modal-head"><h3>新建任务</h3><button class="close" onclick="closeModal()">×</button></div>
- <div class="form-grid"><label class="span2">任务名称<input id="t_title"></label>
- <label>负责人<select id="t_owner">${Object.values(members).map(m=>`<option value="${m.id}">${m.en}</option>`).join('')}</select></label>
- <label>截止日期<input id="t_due" type="date" value="2026-11-20"></label>
- <label class="span2">任务说明<textarea id="t_detail"></textarea></label></div>
- <div class="actions" style="margin-top:18px"><button class="primary" onclick="saveTask()">创建任务</button></div>`);
+
+/* 任务状态：四档分段控件（点选或拖动拇指） */
+const TASK_STATUS=['待处理','进行中','已完成','受限'];
+function taskTagCls(st){return st==='进行中'?'cytag':st==='受限'?'redtag':''}
+function setTaskStatus(id,status){
+ const tk=state.tasks.find(x=>String(x.id)===String(id));
+ if(!tk||tk.status===status)return;
+ tk.status=status;
+ log('更新任务状态',tk.title+' → '+status);
+ save();
+ const row=document.querySelector('[data-task-row="'+id+'"]');
+ const tag=row&&row.querySelector('.tag');
+ if(tag){
+  tag.className='tag '+taskTagCls(status);
+  tag.textContent=taskSegLabel(status);
+ }
 }
-function saveTask(){
+function taskModal(id){
+ const x=id?state.tasks.find(z=>String(z.id)===String(id)):null;
+ showModal(`<div class="modal-head"><h3>${x?'编辑任务':'新建任务'}</h3><button class="close" onclick="closeModal()">×</button></div>
+ <div class="form-grid"><label class="span2">任务名称<input id="t_title" value="${x?esc(x.title):''}"></label>
+ <label>负责人<select id="t_owner">${Object.values(members).map(m=>`<option value="${m.id}" ${x&&x.owner===m.id?'selected':''}>${m.en}</option>`).join('')}</select></label>
+ <label>截止日期<input id="t_due" type="date" value="${x?esc(x.due):'2026-11-20'}"></label>
+ <label>状态<select id="t_status">${TASK_STATUS.map(s=>`<option value="${s}" ${x&&x.status===s?'selected':''}>${taskSegLabel(s)}</option>`).join('')}</select></label>
+ <label class="span2">任务说明<textarea id="t_detail">${x?esc(x.detail):''}</textarea></label></div>
+ <div class="actions" style="margin-top:18px">${x?holdBtn({action:'deleteTask',arg:x.id,label:'删除任务',done:'已删除',size:'sm'}):''}<button class="primary" onclick="saveTask('${id||''}')">${x?'保存':'创建任务'}</button></div>`);
+}
+function saveTask(id){
  const title=val('t_title');if(!title){toast('请填写任务名称');return}
- state.tasks.push({id:Date.now(),title,owner:val('t_owner'),due:val('t_due'),status:'待处理',detail:val('t_detail')});
- log('创建任务',title);save();closeModal();render();
+ const st=val('t_status');
+ const obj={title,owner:val('t_owner'),due:val('t_due'),status:TASK_STATUS.indexOf(st)>=0?st:'待处理',detail:val('t_detail')};
+ if(id){
+  const tk=state.tasks.find(x=>String(x.id)===String(id));
+  if(!tk){toast('任务不存在');return}
+  Object.assign(tk,obj);
+  log('编辑任务',title);save();closeModal();render();toast('任务已更新');
+ }else{
+  state.tasks.push(Object.assign({id:Date.now()},obj));
+  log('创建任务',title);save();closeModal();render();toast('任务已创建');
+ }
 }
-function cycleTask(id){
- const t=state.tasks.find(x=>x.id===id),seq=['待处理','进行中','已完成'];
- t.status=seq[(seq.indexOf(t.status)+1)%seq.length];
- log('更新任务状态',t.title+' → '+t.status);save();render();
+function deleteTask(id){
+ const tk=state.tasks.find(x=>String(x.id)===String(id));
+ if(!tk)return;
+ state.tasks=state.tasks.filter(x=>String(x.id)!==String(id));
+ log('删除任务',tk.title);
+ save();
+ try{closeModal()}catch(e){}
+ render();toast('任务已删除');
 }
 function logs(){
  return head('LOG','操作记录','',`<button class="ghost" onclick="exportLogs()">导出</button>`)
@@ -5520,11 +5615,21 @@ function makeSpring(value,onChange){
 
 /* ---------------- RubberSegment ---------------- */
 function rubberSegmentHTML(id,items,value,opts){
-  const o=Object.assign({radius:6,inset:2,equal:true,aria:'Segmented control'},opts||{});
-  return `<div class="rubber-segment" role="radiogroup" aria-label="${o.aria}" data-rubber="${id}"${o.equal?' data-equal':''}
-    style="--rs-radius:${o.radius}px;--rs-inset:${o.inset}px;--rs-thumb-radius:${Math.max(0,o.radius-o.inset)}px">
-   ${items.map(it=>`<button type="button" role="radio" class="rubber-segment__item" data-rs-value="${it.value}" aria-checked="${it.value===value}">${it.label}</button>`).join('')}
-   <div class="rubber-segment__thumb" aria-hidden="true">${items.map(it=>`<span class="rubber-segment__item rubber-segment__copy">${it.label}</span>`).join('')}</div>
+  const o=Object.assign({radius:6,inset:2,equal:true,aria:'Segmented control',
+    h:0,font:0,pad:0,min:0,drag:false,track:'',thumb:'',ink:'',inkActive:'',cls:''},opts||{});
+  const list=items.map(it=>typeof it==='string'?{value:it,label:it}:it);
+  const vars=['--rs-radius:'+o.radius+'px','--rs-inset:'+o.inset+'px','--rs-thumb-radius:'+Math.max(0,o.radius-o.inset)+'px'];
+  if(o.h)vars.push('--rs-h:'+o.h+'px');
+  if(o.font)vars.push('--rs-font:'+o.font+'px');
+  if(o.pad)vars.push('--rs-pad:'+o.pad+'px');
+  if(o.min)vars.push('--rs-min:'+o.min+'px');
+  if(o.track)vars.push('--rs-track:'+o.track);
+  if(o.thumb)vars.push('--rs-thumb:'+o.thumb);
+  if(o.ink)vars.push('--rs-ink:'+o.ink);
+  if(o.inkActive)vars.push('--rs-ink-active:'+o.inkActive);
+  return `<div class="rubber-segment${o.cls?' '+o.cls:''}" role="radiogroup" aria-label="${o.aria}" data-rubber="${id}"${o.equal?' data-equal':''}${o.drag?' data-rs-drag':''} style="${vars.join(';')}">
+   ${list.map(it=>`<button type="button" role="radio" class="rubber-segment__item" data-rs-value="${it.value}" aria-checked="${it.value===value}">${it.label}</button>`).join('')}
+   <div class="rubber-segment__thumb" aria-hidden="true">${list.map(it=>`<span class="rubber-segment__item rubber-segment__copy">${it.label}</span>`).join('')}</div>
   </div>`;
 }
 
@@ -5535,47 +5640,66 @@ function initRubberSegments(root){
     const copies=[...el.querySelectorAll('.rubber-segment__copy')];
     const thumb=el.querySelector('.rubber-segment__thumb');
     if(!items.length||!thumb)return;
-    let slots=[];let innerW=0;
-    let idx=Math.max(0,items.findIndex(b=>b.getAttribute('aria-checked')==='true'));
-    let timer=0;
-    const radius=parseFloat(getComputedStyle(el).getPropertyValue('--rs-thumb-radius'))||6;
 
-    const paint=()=>{
-      const r=Math.max(0,innerW-edgeR.get());
-      const l=Math.max(0,edgeL.get());
-      thumb.style.clipPath=`inset(0 ${r}px 0 ${l}px round ${radius}px)`;
-    };
+    const cs=getComputedStyle(el);
+    const padL=parseFloat(cs.paddingLeft)||0;
+    const radius=parseFloat(cs.getPropertyValue('--rs-thumb-radius'))||6;
+    const canDrag=el.hasAttribute('data-rs-drag');
+
+    let slots=[],innerW=0,timer=0,sqTimer=0,gen=0;
+    let idx=items.findIndex(b=>b.getAttribute('aria-checked')==='true');
+    if(idx<0)idx=0;
+
     const edgeL=makeSpring(0,paint);
     const edgeR=makeSpring(0,paint);
 
-    const measure=()=>{
+    function paint(){
+      const l=Math.max(0,edgeL.get());
+      const r=Math.max(0,innerW-edgeR.get());
+      thumb.style.clipPath=`inset(0 ${r}px 0 ${l}px round ${radius}px)`;
+    }
+
+    function measure(){
       const box=el.getBoundingClientRect();
-      innerW=box.width-parseFloat(getComputedStyle(el).paddingLeft)*2;
+      innerW=Math.max(0,box.width-padL*2);
       slots=items.map(b=>{
         const r=b.getBoundingClientRect();
-        return {l:r.left-box.left-parseFloat(getComputedStyle(el).paddingLeft),r:r.right-box.left-parseFloat(getComputedStyle(el).paddingLeft)};
+        return {l:r.left-box.left-padL,r:r.right-box.left-padL};
       });
-      const s=slots[idx];if(!s)return;
-      edgeL.jump(s.l);edgeR.jump(s.r);paint();
-    };
+      const s=slots[idx];
+      if(s){edgeL.jump(s.l);edgeR.jump(s.r);}
+      paint();
+    }
 
-    const land=to=>{
+    /* 落位：前缘先到，后缘过冲 squash 像素再回弹 */
+    function land(to,sq){
       const b=slots[to];if(!b)return;
-      edgeL.to(b.l,{stiffness:260,damping:24});
-      edgeR.to(b.r,{stiffness:260,damping:24});
-    };
+      const g=++gen;
+      const mid=(edgeL.get()+edgeR.get())/2;
+      const dir=Math.sign((b.l+b.r)/2-mid)||1;
+      const lead=dir>0?edgeR:edgeL, leadTo=dir>0?b.r:b.l;
+      const trail=dir>0?edgeL:edgeR, trailTo=dir>0?b.l:b.r;
+      lead.to(leadTo,{stiffness:280,damping:26});
+      clearTimeout(sqTimer);
+      if(sq>0){
+        trail.to(trailTo+dir*sq,{stiffness:430,damping:28});
+        sqTimer=setTimeout(()=>{if(g===gen)trail.to(trailTo,{stiffness:205,damping:26})},110);
+      }else{
+        trail.to(trailTo,{stiffness:280,damping:26});
+      }
+    }
 
-    const travel=(from,to)=>{
+    /* 位移：两帧之间把拇指横向拉长，落位时收回 */
+    function travel(from,to){
       const a=slots[from],b=slots[to];
-      if(!a||!b){land(to);return;}
+      if(!a||!b){land(to,0);return;}
       clearTimeout(timer);
-      const sw=1;
-      edgeL.to(b.l+(Math.min(a.l,b.l)-b.l)*sw,{stiffness:340,damping:30});
-      edgeR.to(b.r+(Math.max(a.r,b.r)-b.r)*sw,{stiffness:340,damping:30});
-      timer=setTimeout(()=>land(to),150);
-    };
+      edgeL.to(b.l+(Math.min(a.l,b.l)-b.l),{stiffness:340,damping:30});
+      edgeR.to(b.r+(Math.max(a.r,b.r)-b.r),{stiffness:340,damping:30});
+      timer=setTimeout(()=>land(to,3),150);
+    }
 
-    const select=(to,fire)=>{
+    function select(to,fire){
       if(to===idx||to<0||to>=items.length)return;
       const from=idx;idx=to;
       items.forEach((b,i)=>b.setAttribute('aria-checked',String(i===to)));
@@ -5585,7 +5709,7 @@ function initRubberSegments(root){
         const detail={value:items[to].dataset.rsValue,index:to,id:el.dataset.rubber};
         el.dispatchEvent(new CustomEvent('rb:change',{detail,bubbles:true}));
       }
-    };
+    }
 
     items.forEach((b,i)=>{
       b.addEventListener('click',e=>{e.preventDefault();select(i);b.blur();});
@@ -5596,6 +5720,49 @@ function initRubberSegments(root){
         if(next==null)return;e.preventDefault();select(next);items[next].focus();
       });
     });
+
+    /* 可选拖拽：抓住拇指滑动，松手吸附到最近档 */
+    if(canDrag){
+      let drag=null;
+      const localX=e=>e.clientX-el.getBoundingClientRect().left-padL;
+      el.addEventListener('pointerdown',e=>{
+        if(e.button!==0||drag)return;
+        const x=localX(e);
+        if(x<edgeL.get()-3||x>edgeR.get()+3)return;
+        drag={id:e.pointerId,x0:x,l0:edgeL.get(),w0:Math.max(0,edgeR.get()-edgeL.get()),live:false};
+        try{el.setPointerCapture(e.pointerId)}catch(_){}
+        clearTimeout(timer);clearTimeout(sqTimer);gen++;
+        edgeL.stop();edgeR.stop();
+        el.setAttribute('data-held','');
+      });
+      el.addEventListener('pointermove',e=>{
+        if(!drag||e.pointerId!==drag.id)return;
+        const x=localX(e);
+        if(!drag.live){
+          if(Math.abs(x-drag.x0)<3)return;
+          drag.live=true;
+        }
+        const maxL=Math.max(0,innerW-drag.w0);
+        const l=Math.max(0,Math.min(maxL,drag.l0+(x-drag.x0)));
+        edgeL.jump(l);edgeR.jump(l+drag.w0);
+      });
+      const end=e=>{
+        if(!drag||e.pointerId!==drag.id)return;
+        const d=drag;drag=null;
+        el.removeAttribute('data-held');
+        if(!d.live)return;
+        const x=localX(e);
+        let to=idx,best=Infinity;
+        slots.forEach((s,i)=>{
+          const c=Math.abs((s.l+s.r)/2-x);
+          if(c<best){best=c;to=i;}
+        });
+        if(to===idx)land(idx,2);else select(to);
+      };
+      el.addEventListener('pointerup',end);
+      el.addEventListener('pointercancel',end);
+      el.addEventListener('lostpointercapture',end);
+    }
 
     items[idx].setAttribute('aria-checked','true');
     copies[idx].setAttribute('aria-checked','true');
@@ -5613,6 +5780,7 @@ function initRubberSegments(root){
 /* ---------------- HoldButton ---------------- */
 const HOLD_DISPATCH={
   deleteCase:id=>window.deleteCase&&window.deleteCase(id),
+  deleteTask:id=>window.deleteTask&&window.deleteTask(id),
   deleteEvidence:id=>window.deleteEvidence&&window.deleteEvidence(id),
   deleteLocation:id=>window.deleteLocation&&window.deleteLocation(id),
   deleteRoom:id=>window.deleteConversation&&window.deleteConversation(id),
@@ -6559,6 +6727,13 @@ function initAccordions(root) {
     }
   });
 }
+
+/* 任务状态分段控件：事件委托（rb:change 会冒泡） */
+document.addEventListener('rb:change',e=>{
+ const id=e.detail&&e.detail.id;
+ if(!id||String(id).indexOf('task-')!==0)return;
+ setTaskStatus(String(id).slice(5),e.detail.value);
+});
 
 /* ---------------- 统一初始化 ---------------- */
 function initReactBits(root){
