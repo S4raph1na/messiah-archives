@@ -7557,7 +7557,8 @@ var MODE='loop';
 try{M.__state=M;window.musicState=M}catch(e){}
 var audio=new Audio();audio.volume=.45;
 try{M.audio=audio}catch(e){}
-try{var raw=localStorage.getItem(LS);if(raw){var arr=JSON.parse(raw);if(Array.isArray(arr))M.list=arr}}catch(e){}
+var hadStore=false;
+try{var raw=localStorage.getItem(LS);if(raw!=null){hadStore=true;if(raw){var arr=JSON.parse(raw);if(Array.isArray(arr))M.list=arr}}}catch(e){}
 function save(){try{localStorage.setItem(LS,JSON.stringify(M.list))}catch(e){}}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function cur(){return M.list[M.cur]||null}
@@ -7689,6 +7690,7 @@ window.musicToggle=function(){
  if(audio.paused){audio.play().catch(function(){toast(PL('播放被浏览器拦截，请再点一次','Playback blocked by the browser, click again'))})}
  else audio.pause();
 };
+var MU_MIRRORS=['https://api.injahow.cn/meting/?server=netease&type=url&id=','https://api.qijieya.cn/meting/?server=netease&type=url&id='];
 function playAt(i){
  if(!M.list.length)return;
  i=((i%M.list.length)+M.list.length)%M.list.length;
@@ -7696,15 +7698,72 @@ function playAt(i){
  var fb=function(){
   if(!audio.src)return;
   var m=String(t.url||'').match(/[?&]id=(\d+)/);
-  if(m&&!t._fb){t._fb=1;toast(PL('解析链接失效，切换官方外链重试…','Relink failed, retrying with official link…'));start('https://music.163.com/song/media/outer/url?id='+m[1]+'.mp3')}
-  else{toast(PL('无法播放：','Cannot play: ')+t.name+PL('（VIP 或版权受限）',' (VIP or copyright-limited)'))}
+  if(!m){toast(PL('无法播放：','Cannot play: ')+t.name);return}
+  var nxt=(t._mir||0)+1;
+  if(nxt<MU_MIRRORS.length){
+   t._mir=nxt;
+   toast(PL('音源失效，切换备用线路…','Audio source failed, switching mirror…'));
+   start(MU_MIRRORS[nxt]+m[1]);
+   return;
+  }
+  t._mir=0;
+  toast(PL('无法播放：','Cannot play: ')+t.name+PL('（VIP 或版权受限）',' (VIP or copyright-limited)'))
  };
- var start=function(src){audio.src=src;window.__musicFb=fb;audio.play().then(function(){updateDock();syncPlayBtn()}).catch(fb)};
+ var start=function(src){audio.src=src;window.__musicFb=fb;audio.play().then(function(){t._mir=0;updateDock();syncPlayBtn()}).catch(fb)};
  audio.onerror=function(){if(window.__musicFb)window.__musicFb()};
  if(t.local){idbGet(t.id).then(function(b){if(b)start(URL.createObjectURL(b));else toast(PL('本地文件丢失，请重新上传','Local file missing, please re-upload'))})}
  else start(t.url);
 }
 window.musicPlayAt=function(i){playAt(i)};
+
+/* ---- 仓库内置默认歌单：同目录 playlist.json ---- */
+var DEFAULT_PL='playlist.json';
+function absUrl(u,base){
+ if(!u)return '';
+ u=String(u);
+ if(/^(https?:|data:|blob:)/i.test(u))return u;
+ try{return new URL(u,base||document.baseURI||location.href).href}catch(e){return u}
+}
+function normTrack(x,base){
+ if(!x)return null;
+ if(typeof x==='string')x={url:x};
+ var u=x.url||x.src||x.file||'';
+ if(!u)return null;
+ var nm=String(x.name||x.title||u.split('/').pop()||'Track').replace(/\.[^.]+$/,'');
+ return {name:nm,artist:String(x.artist||x.author||''),url:absUrl(u,base),pic:x.pic?absUrl(x.pic,base):'',local:false};
+}
+function trackKey(t){return String(t.url||t.id||t.name||'')+'|'+String(t.artist||'')}
+function mergeTracks(list,base){
+ var keys={};
+ M.list.forEach(function(t){keys[trackKey(t)]=1});
+ var n=0;
+ list.forEach(function(x){
+  var t=normTrack(x,base);
+  if(!t)return;
+  var k=trackKey(t);
+  if(keys[k])return;
+  keys[k]=1;M.list.push(t);n++;
+ });
+ return n;
+}
+window.musicLoadDefault=function(silent){
+ var url=absUrl(DEFAULT_PL);
+ return fetch(url,{cache:'no-store'}).then(function(r){
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+ }).then(function(d){
+  var list=Array.isArray(d)?d:(d&&(d.tracks||d.songs||d.list))||[];
+  if(!Array.isArray(list))throw new Error('bad format');
+  var n=mergeTracks(list,url);
+  save();updateDock();
+  if(el('muList'))window.musicModal();
+  if(!silent)toast(n?PL('已从 playlist.json 载入 '+n+' 首','Loaded '+n+' tracks from playlist.json'):PL('playlist.json 中没有新曲目','No new tracks in playlist.json'));
+  return n;
+ }).catch(function(e){
+  if(!silent)toast(PL('没读到同目录的 playlist.json（需与网页放在一起）','Could not read playlist.json next to this page'));
+  return 0;
+ });
+};
 
 /* ---- 导入 / 添加 ---- */
 function parseId(txt){var s=String(txt||'');var m=s.match(/id=(\d+)/)||s.match(/(\d{5,})/);return m?m[1]:null}
@@ -7735,7 +7794,7 @@ window.musicAddSong=function(){
  var elx=el('muInputSong');var raw=elx?elx.value.trim():'';
  var id=parseId(raw);
  if(!id){toast(PL('粘贴歌曲链接或 ID，如 music.163.com/song?id=347230','Paste a song link or ID, e.g. music.163.com/song?id=347230'));return}
- M.list.push({name:PL('网易云单曲 #','NetEase song #')+id,artist:'NetEase',url:'https://music.163.com/song/media/outer/url?id='+id+'.mp3',pic:'',local:false});
+ M.list.push({name:PL('网易云单曲 #','NetEase song #')+id,artist:'NetEase',url:MU_MIRRORS[0]+id,pic:'',local:false});
  save();updateDock();if(elx)elx.value='';
  toast(PL('已添加。VIP/版权受限歌曲可能无法播放','Added. VIP/limited tracks may not play'));
  if(el('muList'))window.musicModal();
@@ -7783,7 +7842,7 @@ window.musicModal=function(){
    +'<div class="mu-meta" onclick="musicPlayAt('+i+')"><b>'+esc(t.name)+'</b><span>'+esc(t.artist||'')+'</span></div>'
    +'<button class="ghost sm red" onclick="musicRemove('+i+')" title="'+PL('移除','Remove')+'">&#10005;</button>'
    +'</div>';
- }).join('')||'<div class="mu-empty">'+PL('还没有曲目：粘贴网易云歌单链接一键导入，或上传本地音乐','No tracks yet: paste a NetEase playlist link to import, or upload local music')+'</div>';
+ }).join('')||'<div class="mu-empty">'+PL('还没有曲目：把 playlist.json 放在网页同目录会自动载入，也可粘贴链接或上传本地音乐','No tracks yet: put playlist.json next to this page to auto-load, or paste a link / upload local music')+'</div>';
  showModal(
   '<div class="mu-modal">'
   +'<h3>'+PL('&#9834; 背景音乐','&#9834; Background Music')+'</h3>'
@@ -7800,7 +7859,8 @@ window.musicModal=function(){
   +'</div>'
   +'<div class="mu-form"><input id="muInputPlaylist" placeholder="'+PL('歌单链接或 ID，如 playlist?id=8888888','playlist link or ID, e.g. playlist?id=8888888')+'"><button class="ghost sm" onclick="musicImportPlaylist()">'+PL('导入歌单','Import playlist')+'</button></div>'
   +'<div class="mu-form"><input id="muInputSong" placeholder="'+PL('单曲链接或 ID，如 song?id=347230','song link or ID, e.g. song?id=347230')+'"><button class="ghost sm" onclick="musicAddSong()">'+PL('添加单曲','Add song')+'</button></div>'
-  +'<div class="mu-form"><button class="ghost sm" onclick="document.getElementById(\'muFile\').click()">'+PL('上传本地音乐','Upload local music')+'</button>'
+  +'<div class="mu-form"><button class="ghost sm" onclick="musicLoadDefault()">'+PL('载入 playlist.json','Load playlist.json')+'</button>'
+  +'<button class="ghost sm" onclick="document.getElementById(\'muFile\').click()">'+PL('上传本地音乐','Upload local music')+'</button>'
   +'<input id="muFile" type="file" accept="audio/*" multiple style="display:none" onchange="musicPickFiles(this.files);this.value=\'\'">'
   +(M.list.length?'<button class="ghost sm red" onclick="musicClear()">'+PL('清空歌单','Clear all')+'</button>':'')+'</div>'
   +'<div class="mu-list" id="muList">'+rows+'</div>'
@@ -7833,6 +7893,7 @@ document.addEventListener('bc:lang',function(){
  try{if(el('muList'))window.musicModal()}catch(e){}
 });
 updateDock();
+try{if(!M.list.length&&!hadStore)window.musicLoadDefault(true)}catch(e){}
 })();
 </script>
 </body>
