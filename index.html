@@ -519,6 +519,8 @@ main{width:100%;max-width:1560px;margin:0 auto;padding:30px clamp(16px,3.5vw,48p
   background-size:100% 100%, 120px 120px, 120px 120px, 24px 24px, 24px 24px;
 }
 .evidence-board:after{content:"NEURAL EVIDENCE MATRIX // DRAG NODES TO RECALCULATE";position:absolute;bottom:14px;left:16px;font:10px var(--mono);letter-spacing:2px;color:var(--cyan);opacity:.6;pointer-events:none}
+:root:lang(de) .modal::before{content:"VERSCHLÜSSELTES OVERLAY // SICHERE KONSOLE"}
+:root:lang(de) .evidence-board:after{content:"NEURALES BEWEISNETZ // KNOTEN ZIEHEN ZUM NEUBERECHNEN"}
 .evidence-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .evidence-lines line.base-line{stroke:rgba(212,175,114,0.35);stroke-width:1.5}
 .evidence-lines line.pulse-line{
@@ -1671,6 +1673,9 @@ body[data-theme="liese"] .glow-card > .rb-glow{--bg-cone:38}
   text-shadow:0 4px 20px rgba(0,0,0,.65);white-space:nowrap;
 }
 .ag-face-title i{flex:none;width:3px;height:1.1em;border-radius:2px;background:var(--accent);box-shadow:0 0 16px var(--accent)}
+.ag-face-title .ag-title-txt{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ag-spine i{max-height:190px;overflow:hidden}
+.panel-title span:not(.live-badge):not(.online-dot){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ag-face-go{font:9px var(--mono);letter-spacing:2.4px;color:var(--muted);margin-left:15px;opacity:.9}
 @media (hover:hover) and (pointer:fine){
   .ag-panel.is-active:hover .ag-face-go{color:var(--accent-bright);opacity:1}
@@ -2139,10 +2144,12 @@ body[data-theme="liese"]{--accent-rgb:4,253,207}
    <div class="rubber-segment" role="radiogroup" aria-label="语言 / Language" id="langToggle" data-rubber="lang" data-equal
         style="--rs-radius:6px;--rs-inset:2px;--rs-thumb-radius:4px;--rs-track:rgba(255,255,255,.06);--rs-thumb:var(--accent);--rs-ink:var(--muted);--rs-ink-active:#0b0710;--rs-min:34px;--rs-pad:9px">
     <button type="button" role="radio" class="rubber-segment__item" data-rs-value="zh" aria-checked="false" title="中文">中</button>
-    <button type="button" role="radio" class="rubber-segment__item" data-rs-value="en" aria-checked="true" title="English">EN</button>
+    <button type="button" role="radio" class="rubber-segment__item" data-rs-value="en" aria-checked="false" title="English">EN</button>
+    <button type="button" role="radio" class="rubber-segment__item" data-rs-value="de" aria-checked="true" title="Deutsch">DE</button>
     <div class="rubber-segment__thumb" aria-hidden="true">
      <span class="rubber-segment__item rubber-segment__copy">中</span>
      <span class="rubber-segment__item rubber-segment__copy">EN</span>
+     <span class="rubber-segment__item rubber-segment__copy">DE</span>
     </div>
    </div>
    <button class="ghost sm" id="photoBtn" title="Replace photos (local upload)" onclick="photoManager()">Photos</button>
@@ -3316,7 +3323,7 @@ document.querySelectorAll('.mod').forEach(b=>b.onclick=()=>{
 });
 
 function head(kicker,title,sub,action=''){
- const back=page!=='dashboard'?`<button class="ghost" onclick="go('dashboard')">← 主控台</button>`:'';
+ const back=page!=='dashboard'?`<button class="ghost" onclick="go('dashboard')">← ${PL('主控台','Command Center','Leitstand')}</button>`:'';
  return `<div class="page-head stagger-item"><div><div class="eyebrow decrypt-text" data-text="${kicker}">${kicker}</div><h2 class="glitch">${title}</h2><p>${sub}</p></div><div class="actions">${back}${action}</div></div>`;
 }
 /* =========================================================
@@ -4179,6 +4186,7 @@ function render(){
   if(host&&!inContent){_parkTerminal();c.innerHTML=head('TERMINAL / 08','系统终端','经典终端 · 彩蛋保留');c.appendChild(host);}
   else if(!host){c.innerHTML=head('TERMINAL / 08','系统终端','经典终端 · 彩蛋保留');}
   try{if(window.musicMount)window.musicMount('terminal')}catch(e){}
+  translateDOM(c);
   c.classList.remove('page-enter');void c.offsetWidth;c.classList.add('page-enter');
   return;
  }else if(host&&inContent){_parkTerminal();}
@@ -4251,7 +4259,17 @@ const PHOTO_SLOTS=[
 const PHOTO={data:{},thumbs:{},db:null,ready:false,volatile:false,backend:''};
 const PHOTO_THUMB='thumb:';
 /* 照片模块文案：中 / EN */
-function PL(zh,en){let e=false;try{e=(LANG==='en')}catch(err){e=false}return e?(en==null?zh:en):zh}
+function PL(zh,en,de){
+ let L='zh';try{L=LANG}catch(err){}
+ if(L==='de'){
+  if(de!=null)return de;
+  if(en!=null){let d=null;try{d=deLookup(en)}catch(err){}if(d!=null)return d}
+  return en==null?zh:en;
+ }
+ if(L==='en')return en==null?zh:en;
+ return zh;
+}
+try{window.PL=PL}catch(e){}
 function slotLabel(key){const s=photoSlot(key);return s?PL(s.label,s.en):key}
 
 function memAvatarAttrs(id){
@@ -4551,7 +4569,7 @@ function photoManager(){
         ?PL('⚠ 本地存储不可用，照片仅在本次会话有效','⚠ Local storage unavailable — photos last only this session')
         :PL('✔ 本地存储正常','✔ Local storage OK'))+'</span>'
     +'<span style="display:flex;gap:8px"><button type="button" class="ghost sm" onclick="photoResetAll()">'+PL('全部恢复默认','Reset all')+'</button>'
-    +'<button type="button" class="primary" onclick="closeModal()">'+PL('完成','Done')+'</button></span></div>'
+    +'<button type="button" class="primary" onclick="closeModal()">'+PL('完成','Done','Fertig')+'</button></span></div>'
     +'</div>');
 }
 function photoSyncManager(){
@@ -4619,7 +4637,7 @@ function hubEvent(){
     ['正在查看卷宗',()=>pickOne(cs).title,'cases'],
     ['在证据网标注了线索',()=>pickOne(ev).title,'evidence'],
     ['更新了战术地图标记',()=>pickOne(lc).name,'map'],
-    ['在频道发送了讯息',()=>'CHANNEL 01 · 弥赛亚三人组','communications'],
+    ['在频道发送了讯息',()=>'CHANNEL 01 · '+t('弥赛亚三人组'),'communications'],
     ['确认了任务进度',()=>pickOne(tk).title,'tasks']
   ];
   const a=pickOne(acts);
@@ -4638,7 +4656,7 @@ function pushFeedItem(ev,when){
 function seedLiveFeed(){
   const box=document.getElementById('liveFeed');if(box)box.innerHTML='';
   for(let i=0;i<4;i++){pushFeedItem(hubEvent(),i===0?t('刚刚'):(4+i*6)+t(' 分钟前'))}
-  const seedSt={lani:t('在线 · 主控台'),yuanzhi:t('在线 · 整理卷宗'),liese:t('在线 · 监听频道')};
+  const seedSt={lani:t('在线')+' · '+t('主控台'),yuanzhi:t('在线')+' · '+t('整理卷宗'),liese:t('在线')+' · '+t('监听频道')};
   Object.keys(seedSt).forEach(id=>setMemberStatus(id,seedSt[id]));
 }
 let hubLifeTimer=null;
@@ -4665,19 +4683,22 @@ function dashboard(){
  const openCases=state.cases.filter(x=>x.status!=='已归档').length;
  const openTasks=state.tasks.filter(x=>x.status!=='已完成').length;
  const hub=[
-  ['02','personnel','成员档案','PERSONNEL · 核心成员',String(Object.keys(members).length).padStart(2,'0'),'p2','avatars'],
-  ['03','cases','案件卷宗','CASES · 调查进行中',String(openCases).padStart(2,'0'),'','num'],
-  ['04','evidence','证据关系网','EVIDENCE · 线索节点',String(state.evidence.length).padStart(2,'0'),'','nodes'],
-  ['05','map','战术地图','MAP · 哥谭坐标标记',String(state.locations.length).padStart(2,'0'),'p2','map'],
-  ['06','communications','加密通讯','COMMS · 加密频道',String(state.chatRooms.length).padStart(2,'0'),'','eq'],
-  ['07','tasks','任务清单','TASKS · 待办事项',String(openTasks).padStart(2,'0'),'','tasks'],
-  ['08','terminal','系统终端','TERMINAL · 彩蛋保留','--','p2','term'],
+  ['02','personnel',PL('成员档案','Personnel files','Personal'),PL('PERSONNEL · 核心成员','PERSONNEL · core members','PERSONAL · Kern'),String(Object.keys(members).length).padStart(2,'0'),'p2','avatars'],
+  ['03','cases',PL('案件卷宗','Case files','Fallakten'),PL('CASES · 调查进行中','CASES · open investigations','FÄLLE · laufend'),String(openCases).padStart(2,'0'),'','num'],
+  ['04','evidence',PL('证据关系网','Evidence network','Beweise'),PL('EVIDENCE · 线索节点','EVIDENCE · clue nodes','BEWEISE · Knoten'),String(state.evidence.length).padStart(2,'0'),'','nodes'],
+  ['05','map',PL('战术地图','Tactical map','Karte'),PL('MAP · 哥谭坐标标记','MAP · Gotham coordinates','KARTE · Gotham'),String(state.locations.length).padStart(2,'0'),'p2','map'],
+  ['06','communications',PL('加密通讯','Encrypted comms','Funk'),PL('COMMS · 加密频道','COMMS · encrypted channels','FUNK · verschlüsselt'),String(state.chatRooms.length).padStart(2,'0'),'','eq'],
+  ['07','tasks',PL('任务清单','Task list','Aufgaben'),PL('TASKS · 待办事项','TASKS · to-dos','AUFGABEN · To-dos'),String(openTasks).padStart(2,'0'),'','tasks'],
+  ['08','terminal',PL('系统终端','System terminal','Konsole'),PL('TERMINAL · 彩蛋保留','TERMINAL · easter egg','KONSOLE · Easter Egg'),'--','p2','term'],
  ];
- if(adminOk)hub.push(['Ω','admin','系统管理','ADMIN · 数据与权限','Ω','p2','omega']);
+ if(adminOk)hub.push(['Ω','admin',PL('系统管理','System admin','Admin'),PL('ADMIN · 数据与权限','ADMIN · data and access','ADMIN · Daten & Rechte'),'Ω','p2','omega']);
  window.__orbitItems=hub.map(h=>({code:h[0],module:h[1],title:h[2],sub:h[3]}));
  const hr=nyHour();
  const greet=hr<5?'LATE NIGHT SHIFT':hr<11?'GOOD MORNING':hr<18?'GOOD AFTERNOON':'GOOD EVENING';
- const greetZh=hr<5?'深夜值班 · 哥谭网格全时在线':hr<11?'晨间监控 · 城市尚未苏醒':hr<18?'日间监控 · 数据链路稳定':'夜间行动 · 哥谭的另一种秩序';
+ const greetSub=hr<5?PL('深夜值班 · 哥谭网格全时在线','LATE NIGHT SHIFT · Gotham grid online all hours','Nachtschicht · Gotham-Grid rund um die Uhr online')
+  :hr<11?PL('晨间监控 · 城市尚未苏醒','MORNING WATCH · the city has not woken yet','Morgenüberwachung · die Stadt schläft noch')
+  :hr<18?PL('日间监控 · 数据链路稳定','DAY WATCH · data link stable','Tagesüberwachung · Datenlink stabil')
+  :PL('夜间行动 · 哥谭的另一种秩序','NIGHT OPS · another order in Gotham','Nachtoperation · Gothams andere Ordnung');
  const who=document.body.classList.contains('batman-mode')?'DARK KNIGHT':members[current].en;
  const V={
   avatars:`<div class="viz vz-avatars">${Object.values(members).map(m=>`<span class="vz-av" style="--vc:${MEM_COLOR[m.id]}${memBgInline(m.id)}"${memPic(m.id)?' data-photo-key="mem-'+m.id+'"':''}>${m.initial}</span>`).join('')}</div>`,
@@ -4690,18 +4711,18 @@ function dashboard(){
   omega:`<div class="viz vz-omega"><svg viewBox="0 0 64 64"><circle class="vz-ring" cx="32" cy="32" r="27" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="5 6"/></svg><b>Ω</b></div>`
  };
  const AG_IMG=HUB_IMG_DEFAULT;
- return head('COMMAND / 01','主控台','模块中枢 — 点击卡片进入对应系统',
+ return head('COMMAND / 01',PL('主控台','Command Center','Leitstand'),PL('模块中枢 — 点击卡片进入对应系统','Module hub — tap a card to open that system','Modulzentrale — Karte antippen, um das System zu öffnen'),
  ``)
  +`<section class="hero stagger-item has-orbit" data-photo-slot="hero">
    <div class="hero-img" data-photo-key="hero" data-photo-kind="bg" style="background-image:url(${pic('hero')})"></div>
-   <span class="photo-edit" role="button" tabindex="0" onclick="photoPick('hero')">更换照片</span>
+   <span class="photo-edit" role="button" tabindex="0" onclick="photoPick('hero')">${PL('更换照片','Replace photo','Foto ändern')}</span>
    <div class="hero-veil"></div><div class="hero-scan"></div><div class="hero-signal"></div>
    <div class="hero-orbit">${orbitHTML(window.__orbitItems||[])}</div>
    <div class="hero-body">
     <div class="hero-greet">
      <div class="eyebrow">SYSTEM ONLINE · NODE GOTHAM-07</div>
      <h2>${greet}, ${who}</h2>
-     <p class="sub">${greetZh} · ${Object.keys(members).length} 名成员在线</p>
+     <p class="sub">${greetSub} · ${Object.keys(members).length} ${PL('名成员在线','members online','Mitglieder online')}</p>
     </div>
     <div class="hero-clockbox">
      <div class="hero-clock" id="heroClock">--:--:--</div>
@@ -4715,10 +4736,10 @@ function dashboard(){
     <div class="vital-body">
      <div class="vital-top"><b>${m.en}</b><span class="vital-bpm"><span class="bpm-num" data-bpm="${m.id}">${HUB_STATE.bpm[m.id]}</span><small> BPM</small></span></div>
      <canvas class="vital-ecg" data-ecg="${m.id}"></canvas>
-     <div class="vital-status"><span class="online-dot"></span><span data-status="${m.id}">在线</span></div>
+     <div class="vital-status"><span class="online-dot"></span><span data-status="${m.id}">${PL('在线','Online','Online')}</span></div>
     </div>
    </div>`).join('')}</div>
- ${window.accordionHTML?window.accordionHTML(hub.map((h,i)=>({code:h[0],module:h[1],title:h[2],sub:h[3],count:h[4],unit:h[6]==='num'?'ACTIVE':'ENTRIES',image:pic('hub-'+i),key:'hub-'+i})),{defaultIndex:1,height:392,expand:.505,tilt:7,enter:'ENTER MODULE →'}):''}
+ ${window.accordionHTML?window.accordionHTML(hub.map((h,i)=>({code:h[0],module:h[1],title:h[2],sub:h[3],count:h[4],unit:h[6]==='num'?'ACTIVE':'ENTRIES',image:pic('hub-'+i),key:'hub-'+i})),{defaultIndex:1,height:392,expand:.505,tilt:7,enter:PL('进入模块 →','ENTER MODULE →','Modul öffnen →'),photoLabel:PL('更换图片','Change image','Bild ändern')}):''}
  <div class="magic-bento dash-bento" id="dashBento" data-motion data-intro>
   <div class="magic-bento__cell mb-sp2 mb-dash-todo">
    <div class="magic-bento__card mb-card mb-todo">
@@ -4731,7 +4752,7 @@ function dashboard(){
    <div class="magic-bento__card mb-card">
     <span class="magic-bento__light"></span>
     <div class="mb-content">
-     <div class="panel-title">CURRENT OPERATIONS <span>案件动态</span></div>
+     <div class="panel-title">CURRENT OPERATIONS <span>${PL('案件动态','Cases','Fallgeschehen')}</span></div>
      ${state.cases.map(x=>`<div class="list-row"><div><b>${esc(x.id)} / ${esc(x.title)}</b><p>${esc(x.desc)}</p></div><span class="tag ${x.priority==='极高'?'redtag':'cytag'}">${esc(x.status)}</span></div>`).join('')}
     </div>
     <span class="magic-bento__rim"></span><span class="magic-bento__border"></span>
@@ -4741,7 +4762,7 @@ function dashboard(){
    <div class="magic-bento__card mb-card mb-feed">
     <span class="magic-bento__light"></span>
     <div class="mb-content">
-     <div class="panel-title">LIVE ACTIVITY <span>实时动态</span><span class="live-badge"><span class="online-dot"></span>LIVE</span></div>
+     <div class="panel-title">LIVE ACTIVITY <span>${PL('实时动态','Live','Live-Feed')}</span><span class="live-badge"><span class="online-dot"></span>LIVE</span></div>
      <div class="feed-live" id="liveFeed"></div>
     </div>
     <span class="magic-bento__rim"></span><span class="magic-bento__border"></span>
@@ -4751,7 +4772,7 @@ function dashboard(){
    <div class="magic-bento__card mb-card mb-feed">
     <span class="magic-bento__light"></span>
     <div class="mb-content">
-     <div class="panel-title">INTERNAL ACTIVITY <span>最近操作</span></div>
+     <div class="panel-title">INTERNAL ACTIVITY <span>${PL('最近操作','Recent','Letzte Aktionen')}</span></div>
      ${state.logs.slice(0,5).map(x=>`<div class="feed-item"><div class="feed-time">${esc(x.time)}</div><div><b>${esc(x.actor)} · ${esc(x.action)}</b><p>${esc(x.detail)}</p></div></div>`).join('')}
     </div>
     <span class="magic-bento__rim"></span><span class="magic-bento__border"></span>
@@ -4761,7 +4782,7 @@ function dashboard(){
    <div class="magic-bento__card mb-card">
     <span class="magic-bento__light"></span>
     <div class="mb-content">
-     <div class="panel-title">TACTICAL RADAR & NODES <span>卫星扫描</span></div>
+     <div class="panel-title">TACTICAL RADAR & NODES <span>${PL('卫星扫描','Scan','Satellitenscan')}</span></div>
      <div class="radar-box">
       <div class="radar-circle">
        <div class="radar-sweep"></div>
@@ -4770,9 +4791,9 @@ function dashboard(){
       </div>
       <div style="font:12px/1.7 var(--mono)">
        <div class="cyan">SECTOR: GOTHAM-07</div>
-       <div class="muted">ACTIVE PINS: ${state.locations.length} TARGETS</div>
+       <div class="muted">${PL('有效标记：','ACTIVE PINS:','AKTIVE PINS:')} ${state.locations.length} ${PL('个目标','TARGETS','ZIELE')}</div>
        <div class="gold" style="margin-top:4px">● UPLINK STABLE</div>
-       <button class="ghost sm" style="margin-top:8px" onclick="go('map')">打开战术地图 ↗</button>
+       <button class="ghost sm" style="margin-top:8px" onclick="go('map')">${PL('打开战术地图 ↗','Open tactical map ↗','Taktische Karte öffnen ↗')}</button>
       </div>
      </div>
     </div>
@@ -4876,22 +4897,627 @@ Object.assign(DICT,{
 '⚠ 本地存储不可用，照片仅在本次会话有效':'⚠ Local storage unavailable — photos last only this session','✔ 本地存储正常':'✔ Local storage OK',
 '刷新后会还原':'it will revert on refresh','照片已替换，但浏览器拒绝本地存储，刷新后会还原':'Photo replaced, but the browser blocked local storage — it will revert on refresh'
 });
-function t(s){if(LANG!=='en'||s==null)return s;const v=DICT[s];return v!==undefined?v:s}
-function tl(s){const v=DICT[s];return LANG==='en'&&v!==undefined?v:s}
+/* 德语词表（完整版）
+   DE_EN：英文字面 → 德语。三处共用：① DICT 中文词条反查；② PL(zh,en) 两参调用的德语回落；
+   ③ translateDOM 对硬编码英文标签（面板标题、页眉、登录页外壳）的替换。
+   键若以 “/” 或 “:” 结尾，视为前缀键，用于 “CASE FILE / A-2049” 这类拼接标签。 */
+const DE_EN={
+ "System Architect / ADMIN":"Systemarchitektin / ADMIN",
+ "Prosecutor / LEGAL ACCESS":"Staatsanwältin / LEGAL ACCESS",
+ "Investigator / RESTRICTED":"Ermittlerin / RESTRICTED",
+ "Designer and maintainer of the system. She coordinates funding, property, networks and investigation paths — reading a building’s chain of title before asking what happened inside.":"Entwicklerin und Wartung des Systems. Sie koordiniert Finanzierung, Eigentum, Netzwerke und Ermittlungswege — sie liest zuerst die Eigentumskette eines Gebäudes und fragt dann, was darin geschah.",
+ "Approaches cases as a prosecutor. She cares whether documents hold up, whether the evidence chain is complete — and why an official record went missing.":"Sie geht Fälle wie eine Staatsanwältin an. Sie prüft, ob Dokumente Bestand haben, ob die Beweiskette lückenlos ist — und warum ein amtlicher Eintrag fehlt.",
+ "She holds the part of the experiment that public records cannot reconstruct — both investigator and the detail that resists being filed.":"Sie hält den Teil des Experiments, den öffentliche Akten nicht rekonstruieren können — Ermittlerin und zugleich der Punkt, der sich nicht ablegen lässt.",
+ "System architecture, asset tracking, networks":"Systemarchitektur, Vermögensverfolgung, Netzwerke",
+ "Legal records, evidence review, official documents":"Rechtsakten, Beweisprüfung, amtliche Dokumente",
+ "Experiment logs, field details, internal leads":"Versuchsprotokolle, Details vor Ort, interne Spuren",
+ "Online · ADMIN":"Online · ADMIN",
+ "Online · MEMBER":"Online · MEMBER",
+ "System design & maintenance":"Systementwurf & Wartung",
+ "Legal & evidence review":"Recht & Beweisprüfung",
+ "Experimental leads & field work":"Versuchsspuren & Feldarbeit",
+ "Fixed member / no public signup":"Festes Mitglied / keine Registrierung",
+ "Chemical Plant Anomaly":"Chemiewerk-Anomalie",
+ "Tracing plant ownership changes, maintenance records and the money flow around the incident.":"Verfolgt Eigentümerwechsel des Werks, Wartungsunterlagen und den Geldfluss rund um den Vorfall.",
+ "Missing Persons File":"Vermisstenakte",
+ "Cross-checking the missing persons list against incident files.":"Gleicht die Vermisstenliste mit den Vorfallsakten ab.",
+ "Unnumbered Experiment Log":"Unnummeriertes Versuchsprotokoll",
+ "Missing pages and unmatched experiment numbers. Subject confirmation required.":"Fehlende Seiten und nicht zuordenbare Versuchsnummern. Bestätigung der Betroffenen nötig.",
+ "Open":"Offen",
+ "Pending review":"In Prüfung",
+ "Archived":"Archiviert",
+ "Restricted":"Gesperrt",
+ "Critical":"Kritisch",
+ "High":"Hoch",
+ "Medium":"Mittel",
+ "Low":"Niedrig",
+ "Verify plant ownership change records":"Eigentümerwechsel des Werks prüfen",
+ "Start from property tax, title transfers and maintenance contractors.":"Beginnt bei Grundsteuer, Eigentumsübertragungen und Wartungsfirmen.",
+ "Pull initial and amended incident reports":"Erstbericht und Nachträge beschaffen",
+ "Compare the public version with the prosecutor’s archive.":"Vergleicht die öffentliche Fassung mit dem Archiv der Staatsanwaltschaft.",
+ "Confirm experiment number mappings":"Zuordnung der Versuchsnummern bestätigen",
+ "Update linked records only after FizzPop confirms.":"Verknüpfte Einträge erst nach FizzPops Bestätigung ändern.",
+ "Plant ownership change":"Eigentümerwechsel Werk",
+ "Maintenance contractor":"Wartungsfirma",
+ "Initial incident report":"Erstbericht zum Vorfall",
+ "Experiment no. C-3301":"Versuch Nr. C-3301",
+ "Missing persons list":"Vermisstenliste",
+ "Document":"Dokument",
+ "Company":"Firma",
+ "Official record":"Amtlicher Eintrag",
+ "Restricted lead":"Gesperrte Spur",
+ "Person":"Person",
+ "New lead":"Neue Spur",
+ "Gotham District Court":"Bezirksgericht Gotham",
+ "Harbor Warehouse":"Hafenlager",
+ "Eastside Clinic":"Klinik Eastside",
+ "Old Wayne Archive":"Altes Wayne-Archiv",
+ "Chemical plant":"Chemiewerk",
+ "Legal records and amendments":"Rechtsakten und Nachträge",
+ "Contractor and shipping records":"Firmen- und Frachtunterlagen",
+ "Missing-persons leads":"Spuren zu Vermissten",
+ "Property history files":"Eigentumshistorie",
+ "Messiah Trio":"Messiah-Trio",
+ "Private channel for the three fixed members":"Privater Kanal der drei festen Mitglieder",
+ "A-2049 Investigation":"A-2049 Ermittlung",
+ "Task channel linked to the plant anomaly case":"Aufgabenkanal zum Fall der Werksanomalie",
+ "Local encrypted node GOTHAM-07 is online. Tonight we focus on A-2049’s ownership chain.":"Lokaler verschlüsselter Knoten GOTHAM-07 ist online. Heute Nacht prüfen wir die Eigentumskette von A-2049.",
+ "Two pages are missing from the prosecutor’s incident report. I’ll pull the original receipts tomorrow morning.":"Im Vorfallbericht der Staatsanwaltschaft fehlen zwei Seiten. Ich hole morgen früh die Originalquittungen.",
+ "Watch C-3301’s numbers — one reagent batch overlaps the old plant’s maintenance contractor.":"Achtet auf C-3301 — eine Reagenzcharge überschneidet sich mit der Wartungsfirma des alten Werks.",
+ "Contractor ownership change added to A-2049 — see the evidence network for links.":"Eigentümerwechsel der Firma zu A-2049 hinzugefügt — Verknüpfungen im Beweisnetz sichtbar.",
+ "Fusion test message":"Fusionstest-Nachricht",
+ "Open items":"Offene Punkte",
+ "Add a task…":"Aufgabe hinzufügen…",
+ "Add":"Hinzufügen",
+ "Edit item":"Eintrag bearbeiten",
+ "Task":"Aufgabe",
+ "No items yet — add one above":"Noch keine Einträge — oben hinzufügen",
+ "Please enter a task":"Bitte Aufgabe eingeben",
+ "Item added":"Eintrag hinzugefügt",
+ "Item updated":"Eintrag aktualisiert",
+ "Item deleted":"Eintrag gelöscht",
+ "Item not found":"Eintrag nicht gefunden",
+ "Delete item":"Eintrag löschen",
+ "Court in session":"Gerichtssitzung",
+ "Sleeping 😴":"Schläft 😴",
+ "Lab work":"Laborarbeit",
+ "Secure link established":"Sichere Verbindung steht",
+ "Entered private workspace":"Privater Arbeitsbereich betreten",
+ "Unknown super-clearance access":"Unbekannter Super-Zugriff",
+ "Updated case":"Fall aktualisiert",
+ "Sent internal message":"Interne Nachricht gesendet",
+ "Confirm task":"Aufgabe bestätigen",
+ "Deleted map location":"Kartenpunkt gelöscht",
+ "Delete case":"Fall löschen",
+ "Admin session started":"Admin-Sitzung gestartet",
+ "Edited member profile":"Mitgliederprofil bearbeitet",
+ "Added evidence node":"Beweisknoten hinzugefügt",
+ "Linked evidence":"Beweis verknüpft",
+ "New map location":"Neuer Kartenpunkt",
+ "Updated coordinates":"Koordinaten aktualisiert",
+ "Updated network layout":"Netzwerklayout aktualisiert",
+ "Updated task status":"Aufgabenstatus aktualisiert",
+ "Exported system data":"Systemdaten exportiert",
+ "Flagged C-3301 anomaly":"C-3301-Anomalie markiert",
+ "Command Deck":"Leitstand",
+ "Personnel":"Personalakten",
+ "Case Files":"Fallakten",
+ "Evidence Network":"Beweisnetz",
+ "Tactical Map":"Taktische Karte",
+ "Comms":"Funk",
+ "Tasks":"Aufgaben",
+ "Terminal":"Konsole",
+ "Admin":"Verwaltung",
+ "Gotham Map":"Gotham-Karte",
+ "Task Manager":"Aufgabenverwaltung",
+ "Evidence":"Beweise",
+ "Module hub — click a card to enter":"Modulzentrale — Karte antippen, um das System zu öffnen",
+ "← Command Deck":"← Leitstand",
+ "Classic terminal · easter eggs inside":"Klassische Konsole · mit Easter Eggs",
+ "PERSONNEL · Core team":"PERSONAL · Kernteam",
+ "CASES · Active":"FÄLLE · Aktiv",
+ "EVIDENCE · Nodes":"BEWEISE · Knoten",
+ "MAP · Gotham pins":"KARTE · Gotham-Pins",
+ "COMMS · Encrypted":"FUNK · Verschlüsselt",
+ "TASKS · Open":"AUFGABEN · Offen",
+ "TERMINAL · Easter eggs":"KONSOLE · Easter Eggs",
+ "ADMIN · Data & access":"ADMIN · Daten & Rechte",
+ "Core team":"Kernteam",
+ "Active":"Aktiv",
+ "Easter eggs":"Easter Eggs",
+ "Data & access":"Daten & Rechte",
+ "Encrypted":"Verschlüsselt",
+ "Nodes":"Knoten",
+ "Gotham pins":"Gotham-Pins",
+ "Quick log":"Schnellnotiz",
+ "Case files →":"Fallakten →",
+ "New case":"Neuer Fall",
+ "Details":"Details",
+ "Edit case":"Fall bearbeiten",
+ "View evidence network":"Beweisnetz ansehen",
+ "Edit profile":"Profil bearbeiten",
+ "Save profile":"Profil speichern",
+ "Role":"Rolle",
+ "Identity":"Identität",
+ "Specialty":"Fachgebiet",
+ "Status / priority":"Status / Priorität",
+ "Lead":"Verantwortlich",
+ "Access level":"Zugriffsstufe",
+ "Priority":"Priorität",
+ "No linked cases":"Keine verknüpften Fälle",
+ "Member names are fixed and cannot be changed.":"Mitgliedsnamen sind fest und nicht änderbar.",
+ "Editing ":"Profil von ",
+ "’s profile":" bearbeiten",
+ "New task":"Neue Aufgabe",
+ "Create task":"Aufgabe anlegen",
+ "Task title":"Aufgabentitel",
+ "Due date":"Frist",
+ "Action":"Aktion",
+ "Save":"Speichern",
+ "Cancel":"Abbrechen",
+ "Delete":"Löschen",
+ "Done":"Fertig",
+ "Task title required":"Aufgabentitel erforderlich",
+ "Title required":"Titel erforderlich",
+ "Update status":"Status ändern",
+ "In progress":"Läuft",
+ "Pending":"Offen",
+ "Add location":"Ort hinzufügen",
+ "Location name":"Ortsname",
+ "Linked lead / notes":"Verknüpfte Spur / Notizen",
+ "Pin color":"Pin-Farbe",
+ "Coord X":"Koord. X",
+ "Coord Y":"Koord. Y",
+ "Save location":"Ort speichern",
+ "Edit map location":"Kartenpunkt bearbeiten",
+ "Delete this location":"Diesen Ort löschen",
+ "Location removed":"Ort entfernt",
+ "Location updated":"Ort aktualisiert",
+ "Location name required":"Ortsname erforderlich",
+ "e.g. Old Arkham Asylum":"z. B. altes Arkham-Sanatorium",
+ "Gold · archive / institution":"Gold · Archiv / Institution",
+ "Red · incident / hazard":"Rot · Vorfall / Gefahr",
+ "Cyan · medical / lead":"Türkis · Medizin / Spur",
+ "Green · safehouse / node":"Grün · Safehouse / Knoten",
+ "Receive coordinates from satellite":"Koordinaten vom Satelliten empfangen",
+ "Add Gotham map location":"Gotham-Kartenpunkt hinzufügen",
+ "Add node":"Knoten hinzufügen",
+ "Add evidence node":"Beweisknoten hinzufügen",
+ "Node name":"Knotenname",
+ "Node type":"Knotentyp",
+ "Enter lead name":"Spurname eingeben",
+ "Link nodes":"Knoten verknüpfen",
+ "From":"Von",
+ "To":"Nach",
+ "Link":"Verknüpfen",
+ "Delete this node and its links?":"Diesen Knoten und seine Verknüpfungen löschen?",
+ "These nodes are already linked":"Diese Knoten sind bereits verknüpft",
+ "A node cannot link to itself":"Ein Knoten kann nicht mit sich selbst verknüpft werden",
+ "At least two nodes required":"Mindestens zwei Knoten nötig",
+ "Node layout reset":"Knotenlayout zurückgesetzt",
+ "Links are working hypotheses, not established facts. Drag nodes to re-layout":"Verbindungen sind Arbeitshypothesen, keine feststehenden Fakten. Knoten zum Neu-Anordnen ziehen",
+ "Click a node to view its links.":"Knoten antippen, um Verknüpfungen zu sehen.",
+ "Send ↗":"Senden ↗",
+ "As ":"Als ",
+ " — send an encrypted message...":" — verschlüsselte Nachricht senden…",
+ "Admin access only":"Nur für Administratoren",
+ "Export all data":"Alle Daten exportieren",
+ "Restore demo data":"Demodaten wiederherstellen",
+ "Restore demo data? Local changes will be overwritten.":"Demodaten wiederherstellen? Lokale Änderungen werden überschrieben.",
+ "This cannot be undone.":"Dies kann nicht rückgängig gemacht werden.",
+ "Cases, tasks, logs, map pins, messages and evidence nodes live in this browser’s localStorage. Export a backup or restore the demo data anytime.":"Fälle, Aufgaben, Protokolle, Kartenpunkte, Nachrichten und Beweisknoten liegen im localStorage dieses Browsers. Backup exportieren oder Demodaten jederzeit wiederherstellen.",
+ "Case activity":"Fallgeschehen",
+ "Live activity":"Live-Feed",
+ "Recent actions":"Letzte Aktionen",
+ "Satellite scan":"Satellitenscan",
+ "Open tactical map ↗":"Taktische Karte öffnen ↗",
+ "Cases under investigation":"Fälle in Bearbeitung",
+ "Open tasks":"Offene Aufgaben",
+ "Evidence nodes":"Beweisknoten",
+ "Gotham pins marked":"Gotham-Pins markiert",
+ "Late-night watch · the grid never sleeps":"Nachtschicht · das Gotham-Grid ruht nie",
+ "Morning watch · the city still sleeps":"Morgenwache · die Stadt schläft noch",
+ "Day watch · data links stable":"Tagwache · Datenlink stabil",
+ "Night ops · Gotham’s other order":"Nachtoperation · Gothams andere Ordnung",
+ "members online":"Mitglieder online",
+ "Online":"Online",
+ "Idle · standby":"Bereit · Standby",
+ "Indexing files":"Indiziert Akten",
+ "Monitoring channels":"Überwacht Kanäle",
+ "Syncing data":"Synchronisiert Daten",
+ "Reviewing tasks":"Prüft Aufgaben",
+ "Viewing case file":"Liest Fallakte",
+ "Tagged evidence":"Beweis markiert",
+ "Updated a map pin":"Kartenpin aktualisiert",
+ "Sent a message":"Nachricht gesendet",
+ "Confirmed task progress":"Aufgabenfortschritt bestätigt",
+ "just now":"gerade eben",
+ " min ago":" Min. her",
+ "yesterday":"gestern",
+ "Profile saved":"Profil gespeichert",
+ "Case saved":"Fall gespeichert",
+ "Case deleted":"Fall gelöscht",
+ "Entry logged":"Eintrag gespeichert",
+ "Activity log exported":"Aktivitätsprotokoll exportiert",
+ "Backup exported":"Backup exportiert",
+ "System ready":"System bereit",
+ "Insufficient clearance":"Unzureichende Rechte",
+ "Syncing nodes":"Synchronisiert Knoten",
+ "Delete case \"":"Fall \"",
+ "Delete location \"":"Ort \"",
+ "\"?":"\" löschen?",
+ "Export":"Export",
+ "Reset":"Zurücksetzen",
+ "Refresh":"Aktualisieren",
+ "Clear":"Leeren",
+ "Time":"Zeit",
+ "Summary":"Zusammenfassung",
+ "Entry content":"Eintrag",
+ "Log entry":"Eintrag sichern",
+ "No notes yet":"Noch keine Notizen",
+ "optional":"optional",
+ "No links":"Keine Verknüpfungen",
+ "No pins yet":"Noch keine Pins",
+ "Enter the channel decryption key to access the internal comms network":"Entschlüsselungsschlüssel eingeben, um das interne Funknetz zu betreten",
+ "Decrypt & connect":"Entschlüsseln & verbinden",
+ "KEY MISMATCH · ATTEMPTS LEFT":"SCHLÜSSEL FALSCH · VERSUCHE ÜBRIG",
+ "CHANNEL LOCKED":"KANAL GESPERRT",
+ "Channel locked — retry in 10s":"Kanal gesperrt — in 10 s erneut versuchen",
+ "Channel decrypted · encrypted comms connected":"Kanal entschlüsselt · Funk verbunden",
+ "drag to rotate":"ziehen zum Drehen",
+ "Encrypted Comms · Channel Unlock":"Verschlüsselter Funk · Kanal entsperren",
+ "+ NEW":"+ NEU",
+ "New encrypted channel":"Neuer verschlüsselter Kanal",
+ "NEW ENCRYPTED CHANNEL // HANDOFF":"NEUER VERSCHLÜSSELTER KANAL // ÜBERGABE",
+ "Channel name":"Kanalname",
+ "Channel notes":"Kanalnotiz",
+ "Channel tag":"Kanalmarke",
+ "First speaker":"Erster Sprecher",
+ "Create channel":"Kanal anlegen",
+ "Channel name required":"Kanalname erforderlich",
+ "Channel created · link encrypted":"Kanal erstellt · Verbindung verschlüsselt",
+ "Channel deleted":"Kanal gelöscht",
+ "Keep at least one channel":"Mindestens ein Kanal muss bleiben",
+ "Delete channel":"Kanal löschen",
+ "Deleted":"Gelöscht",
+ "Delete node":"Knoten löschen",
+ "Removed":"Entfernt",
+ "Reset done":"Zurückgesetzt",
+ "Hold to delete":"Zum Löschen halten",
+ "Click to flip · drag to rotate":"Klick dreht · Ziehen rotiert",
+ "RELATED RECORDS":"VERKNÜPFTE AKTEN",
+ "NOTE":"NOTIZ",
+ "The file card flips on click and turns by drag. Member names are fixed; identity and specialty can be edited via Edit profile.":"Die Aktenkarte dreht sich per Klick und per Ziehen. Namen sind fest; Identität und Fachgebiet lassen sich unter Profil bearbeiten ändern.",
+ "Channel \"":"Kanal \"",
+ "\" created — waiting for the first transmission.":"\" erstellt — warte auf erste Übertragung.",
+ "IDENTITY SHEET / ":"IDENTITÄTSAKTE / ",
+ "Edit task":"Aufgabe bearbeiten",
+ "Delete task":"Aufgabe löschen",
+ "Task updated":"Aufgabe aktualisiert",
+ "Task created":"Aufgabe angelegt",
+ "Task deleted":"Aufgabe gelöscht",
+ "Task not found":"Aufgabe nicht gefunden",
+ "No tasks yet — use New task in the top right to start":"Noch keine Aufgaben — oben rechts „Neue Aufgabe“ wählen",
+ "No tasks yet":"Noch keine Aufgaben",
+ "Replace photo":"Foto ändern",
+ "Replace cover":"Titelbild ändern",
+ "Replace image":"Bild ändern",
+ "Replace photos (local upload)":"Fotos ersetzen (Upload)",
+ "Photos":"Fotos",
+ "PHOTO SLOTS":"FOTO-SLOTS",
+ "Upload":"Hochladen",
+ "Reset all":"Alle zurücksetzen",
+ "Task status":"Aufgabenstatus",
+ "Status":"Status",
+ "Activity log":"Aktivitätsprotokoll",
+ "Member":"Mitglied",
+ "Edit":"Bearbeiten",
+ "Old chemical plant":"Altes Chemiewerk",
+ "A-2049 · Incident scene":"A-2049 · Tatort",
+ "Added the contractor ownership lead":"Spur zum Firmeneigentümerwechsel ergänzt",
+ "The map is a spatial schematic of the fictional Gotham investigation board, not real geography.":"Die Karte ist ein schematischer Raumplan des fiktiven Gotham-Ermittlungsboards, keine reale Geografie.",
+ "This prototype has three fixed identities. There is no signup, no fourth seat and no way to expand the roster.":"Dieser Prototyp hat drei feste Identitäten. Keine Registrierung, kein vierter Platz, keine Erweiterung.",
+ "Image too large (24 MB max)":"Bild zu groß (max. 24 MB)",
+ "Processing photo · ":"Foto wird verarbeitet · ",
+ "Photo updated · ":"Foto aktualisiert · ",
+ "Photo replace failed: ":"Foto ersetzen fehlgeschlagen: ",
+ "unknown error":"unbekannter Fehler",
+ "Default photo restored":"Standardfoto wiederhergestellt",
+ "No custom photos yet":"Noch keine eigenen Fotos",
+ "Restore all defaults":"Alle auf Standard",
+ " slots to defaults":" Fotos auf Standard zurückgesetzt",
+ "⚠ Local storage unavailable — photos last only this session":"⚠ Lokaler Speicher nicht verfügbar — Fotos gelten nur für diese Sitzung",
+ "✔ Local storage OK":"✔ Lokaler Speicher OK",
+ "it will revert on refresh":"beim Neuladen wird es zurückgesetzt",
+ "Photo replaced, but the browser blocked local storage — it will revert on refresh":"Foto ersetzt, aber der Browser blockiert den lokalen Speicher — beim Neuladen zurückgesetzt",
+ " (VIP or copyright-limited)":" (VIP oder rechtebeschränkt)",
+ " slots":" Slots",
+ " slots.":" Slots.",
+ "Added. VIP/limited tracks may not play":"Hinzugefügt. VIP-/limitierte Titel werden evtl. nicht abgespielt",
+ "Audio source failed, switching mirror…":"Audioquelle fehlgeschlagen, wechsle Spiegel…",
+ "Batcomputer monitor · load 23% · 3 secure processes":"Batcomputer-Monitor · Last 23 % · 3 sichere Prozesse",
+ "Batman · Nightwing · Red Robin":"Batman · Nightwing · Red Robin",
+ "Cannot find the playlist ID":"Playlist-ID nicht gefunden",
+ "Cannot play: ":"Wiedergabe nicht möglich: ",
+ "Cluster load · secure processes":"Clusterlast · sichere Prozesse",
+ "Could not read playlist.json next to this page":"playlist.json neben dieser Seite nicht lesbar",
+ "Hero status monitor":"Helden-Statusmonitor",
+ "Import complete: ":"Import fertig: ",
+ "Import data":"Daten importieren",
+ "Import failed: API unavailable, retry later or add songs manually":"Import fehlgeschlagen: API nicht erreichbar — später erneut versuchen oder Titel manuell ergänzen",
+ "Import failed: invalid JSON file":"Import fehlgeschlagen: ungültige JSON-Datei",
+ "Import failed: unknown data category":"Import fehlgeschlagen: unbekannte Datenkategorie",
+ "Import failed: unrecognized format":"Import fehlgeschlagen: unbekanntes Format",
+ "Local file":"Lokale Datei",
+ "Local file missing, please re-upload":"Lokale Datei fehlt, bitte erneut hochladen",
+ "Merged: ":"Zusammengeführt: ",
+ "Monitor Batcomputer":"Batcomputer überwachen",
+ "Monitor heroes":"Helden überwachen",
+ "NetEase song #":"NetEase-Titel #",
+ "No new tracks in playlist.json":"Keine neuen Titel in playlist.json",
+ "No tracks yet: put playlist.json next to this page to auto-load, or paste a link / upload local music":"Noch keine Titel: playlist.json neben diese Seite legen (lädt automatisch), Link einfügen oder lokale Musik hochladen",
+ "Nothing imported (duplicates skipped)":"Nichts importiert (Duplikate übersprungen)",
+ "Paste a playlist link or ID first":"Zuerst Playlist-Link oder ID einfügen",
+ "Paste a song link or ID, e.g. music.163.com/song?id=347230":"Song-Link oder ID einfügen, z. B. music.163.com/song?id=347230",
+ "Playback blocked by the browser, click again":"Wiedergabe vom Browser blockiert, erneut klicken",
+ "Quick actions":"Schnellaktionen",
+ "Remove":"Entfernen",
+ "Removed: ":"Entfernt: ",
+ "Restored all ":"Alle ",
+ "Secure link established. Party is online.":"Sichere Verbindung steht. Gegenstelle ist online.",
+ "Send":"Senden",
+ "Sync external files & leads":"Externe Dateien & Spuren abgleichen",
+ "Type a message…":"Nachricht eingeben…",
+ "Uplink stable · latency 4ms":"Uplink stabil · Latenz 4 ms",
+ "Uploaded photos are compressed and kept in this browser’s IndexedDB. Nothing is written into the HTML file and nothing leaves this machine.<br>You can also drag an image straight onto any slot. Customised: ":"Hochgeladene Fotos werden komprimiert und in der IndexedDB dieses Browsers gespeichert. Nichts wird in die HTML-Datei geschrieben, nichts verlässt diesen Rechner.<br>Ein Bild kann auch direkt auf einen Slot gezogen werden. Angepasst: ",
+ "Command Deck · Hero visual":"Leitstand · Hauptmotiv",
+ "Case A-2049 · Plant incident":"Fall A-2049 · Werksvorfall",
+ "Case B-1177 · Missing persons":"Fall B-1177 · Vermisste",
+ "Case C-3301 · Unnumbered experiment":"Fall C-3301 · Unnummerierter Versuch",
+ "Gallery 01 · Personnel":"Galerie 01 · Personalakten",
+ "Gallery 02 · Case Files":"Galerie 02 · Fallakten",
+ "Gallery 03 · Evidence Network":"Galerie 03 · Beweisnetz",
+ "Gallery 04 · Tactical Map":"Galerie 04 · Taktische Karte",
+ "Gallery 05 · Comms":"Galerie 05 · Funk",
+ "Gallery 06 · Tasks":"Galerie 06 · Aufgaben",
+ "Gallery 07 · Terminal":"Galerie 07 · Konsole",
+ "INTERNAL ACTIVITY":"INTERNE AKTIVITÄT",
+ "CURRENT OPERATIONS":"LAUFENDE OPERATIONEN",
+ "LIVE ACTIVITY":"LIVE-AKTIVITÄT",
+ "LIVE":"LIVE",
+ "TACTICAL RADAR & NODES":"TAKTISCHES RADAR & KNOTEN",
+ "SECTOR: GOTHAM-07":"SEKTOR: GOTHAM-07",
+ "● UPLINK STABLE":"● UPLINK STABIL",
+ "MEMBER CONTROL":"MITGLIEDERKONTROLLE",
+ "LOCAL DATA CONTROL":"LOKALE DATEN",
+ "LOCATION INDEX":"ORT-INDEX",
+ "CHECKLIST":"CHECKLISTE",
+ "ACTIVE SESSION":"AKTIVE SITZUNG",
+ "NO TRANSMISSIONS IN THIS CHANNEL YET.":"NOCH KEINE ÜBERTRAGUNGEN IN DIESEM KANAL.",
+ "PRIMARY FUNCTION":"HAUPTFUNKTION",
+ "CLEARANCE":"FREIGABE",
+ "NETWORK ROLE":"NETZWERKROLLE",
+ "ACCOUNT TYPE":"KONTOTYP",
+ "VITALS":"VITALWERTE",
+ "HEART RATE":"HERZFREQUENZ",
+ "TEAM":"TEAM",
+ "STATUS":"STATUS",
+ "PRIVATE":"PRIVAT",
+ "CASE LINK":"FALLVERKNÜPFUNG",
+ "TEMP":"TEMP",
+ "CUSTOM":"EIGEN",
+ "ACCESS DENIED":"ZUGRIFF VERWEIGERT",
+ "ENCRYPTED CHANNEL // AUTH REQUIRED":"VERSCHLÜSSELTER KANAL // AUTH NÖTIG",
+ "GOTHAM CITY // SATELLITE GRID 07":"GOTHAM CITY // SATELLITENGRID 07",
+ "DRAG PINS TO REPOSITION // CLICK BLANK AREA TO ADD":"PINS ZIEHEN ZUM VERSCHIEBEN // LEERE FLÄCHE KLICKEN ZUM HINZUFÜGEN",
+ "SYSTEM ONLINE · NODE GOTHAM-07":"SYSTEM ONLINE · KNOTEN GOTHAM-07",
+ "SECURE CONNECTION ACTIVE":"SICHERE VERBINDUNG AKTIV",
+ "BATCOMPUTER // MESSIAH TACTICAL HUD":"BATCOMPUTER // MESSIAH TAKTIK-HUD",
+ "[ INCOMING CALL ]":"[ EINGEHENDER ANRUF ]",
+ "GOTHAM CITY":"GOTHAM CITY",
+ "SELECTED EVIDENCE":"GEWÄHLTER BEWEIS",
+ "Switch User":"Benutzer wechseln",
+ "SYSTEM PURGED. PLEASE CONTACT ADMINISTRATOR.":"SYSTEM GELÖSCHT. BITTE ADMINISTRATOR KONTAKTIEREN.",
+ "PERSONNEL / 02":"PERSONAL / 02",
+ "CASES / 03":"FÄLLE / 03",
+ "EVIDENCE / 04":"BEWEISE / 04",
+ "MAP / 05":"KARTE / 05",
+ "COMMS / 06":"FUNK / 06",
+ "TASKS / 07":"AUFGABEN / 07",
+ "TERMINAL / 08":"KONSOLE / 08",
+ "ADMIN / Ω":"ADMIN / Ω",
+ "LOG":"PROTOKOLL",
+ "PERSONNEL FILE / ":"PERSONALAKTE / ",
+ "CASE FILE / ":"FALL / ",
+ "CHANNELS / ":"KANÄLE / ",
+ "ACTIVE PINS:":"AKTIVE PINS:",
+ "RELATED RECORDS / ":"VERKNÜPFTE AKTEN / ",
+ "IDENTITY / ":"IDENTITÄT / ",
+ "PROFILE / ":"PROFIL / "
+};
+
+/* 中文词条 → 德语：由 DE_EN 反查生成，和英文表永远同步 */
+const DICT_DE={};
+Object.keys(DICT).forEach(function(k){
+ const e=DICT[k], d=DE_EN[e];
+ if(d!=null)DICT_DE[k]=d;
+});
+/* 中文源、英文表未收录的条目（登录页 / 终端外壳）直接补德语 */
+Object.assign(DICT_DE,{
+ "权限等级：":"Zugriffsstufe: ",
+ "当前用户：":"Aktiver Nutzer: ",
+ "“哥谭需要你。”":"„Gotham braucht dich.“",
+ "系统接管中...":"Systemübernahme läuft...",
+ "身份确认：BRUCE WAYNE":"Identität bestätigt: BRUCE WAYNE",
+ "> 关键情报：":"> Kerninformation: ",
+ "> 涉及案件：":"> Betroffener Fall: ",
+ "> 目标卷宗：":"> Zielakte: ",
+ "BATCOMPUTER · 终端":"BATCOMPUTER · Konsole",
+ "GCPD 正在请求安全通讯频段接入...":"GCPD fordert Zugang zum sicheren Funkband an...",
+ "Project 张沅芷":"Projekt 张沅芷",
+ "Ver. 未知":"Ver. unbekannt",
+ "[ 警告：该情报已被红罗宾标记为最高优先级 ]":"[ WARNUNG: Diese Information ist von Red Robin als höchste Priorität markiert ]",
+ "⚠️ 系统已锁定":"⚠️ System gesperrt",
+ "加密强度":"Verschlüsselung",
+ "哥谭港走私案 / 企鹅人关联":"Schmuggelfall Gotham-Hafen / Verbindung zu Penguin",
+ "威胁等级":"Bedrohungsstufe",
+ "巴别塔计划 / BABEL":"Projekt Babel / BABEL",
+ "待处理案件 / CASES":"Offene Fälle / CASES",
+ "接入 (ACCEPT)":"Annehmen (ACCEPT)",
+ "拒绝 (REJECT)":"Ablehnen (REJECT)",
+ "按 ENTER 键启动身份验证程序":"ENTER drücken, um die Identitätsprüfung zu starten",
+ "核心状态 / CORE STATUS":"Kernstatus / CORE STATUS",
+ "欢迎回来，":"Willkommen zurück, ",
+ "正在下载阿卡姆疯人院机密档案...":"Arkham-Asylum-Geheimakten werden geladen...",
+ "正在扫描生物特征...":"Biometrische Merkmale werden gescannt...",
+ "确认并进入系统":"Bestätigen und System betreten",
+ "系统日志 / SYSTEM LOG":"Systemlog / SYSTEM LOG",
+ "系统负载":"Systemlast",
+ "解析完成。":"Entschlüsselung abgeschlossen.",
+ "货物藏匿于 45 号码头 7 号仓库地下。":"Die Fracht liegt unter Lager 7, Pier 45.",
+ "身份识别：戈登局长":"Identifikation: Commissioner Gordon",
+ "身份验证通过":"Identitätsprüfung bestanden",
+ "输入系统密码后按回车":"Systempasswort eingeben und Enter drücken",
+ "连按两次 [ ESC ] 强制退出":"Zweimal [ ESC ] drücken zum erzwungenen Beenden",
+ "连接节点":"Verbundene Knoten",
+ "需二次授权进入系统":"Zweite Freigabe erforderlich",
+ "输入指令 (输入 help 查看)":"Befehl eingeben (help für Hilfe)",
+ "输入系统密码":"Systempasswort eingeben",
+ "输入识别码":"Identcode eingeben",
+ "语言 / Language":"Sprache / Language",
+ "身份摘要":"Identität",
+ "只读":"nur lesen"
+});
+
+/* 德语补充词（第二轮）：状态组合、英雄状态、剩余英文标签 */
+Object.assign(DE_EN,{
+'On night patrol':'Auf Nachtpatrouille','Gliding over Blüdhaven':'Gleitet über Blüdhaven',
+'Chugging an energy drink':'Kippelt gerade einen Energydrink',
+'TARGETS:':'ZIELE:','NODES SYNCED':'KNOTEN SYNCHRON','SYNCED':'SYNC','LOST':'VERLOREN',
+'CHANNEL LINK':'KANAL-LINK'
+});
+/* 英文表补充（EN 模式同步受益） */
+Object.assign(DICT,{'整理卷宗':'Indexing case files','监听频道':'Monitoring channels'});
+/* 德语补丁引入的 48 个键补英文（否则 EN 模式 translateText 命中后查不到会输出 undefined） */
+Object.assign(DICT,{
+'权限等级：':'CLEARANCE LEVEL: ','当前用户：':'CURRENT USER: ',
+'“哥谭需要你。”':'“Gotham needs you.”','系统接管中...':'SYSTEM TAKEOVER IN PROGRESS...',
+'身份确认：BRUCE WAYNE':'IDENTITY CONFIRMED: BRUCE WAYNE',
+'> 关键情报：':'> KEY INTEL: ','> 涉及案件：':'> RELATED CASE: ','> 目标卷宗：':'> TARGET FILE: ',
+'BATCOMPUTER · 终端':'BATCOMPUTER · TERMINAL',
+'GCPD 正在请求安全通讯频段接入...':'GCPD is requesting secure comms channel access...',
+'Project 张沅芷':'Project 张沅芷','Ver. 未知':'Ver. Unknown',
+'[ 警告：该情报已被红罗宾标记为最高优先级 ]':'[ WARNING: This intel is flagged TOP PRIORITY by Red Robin ]',
+'⚠️ 系统已锁定':'⚠️ SYSTEM LOCKED','加密强度':'Encryption Strength',
+'哥谭港走私案 / 企鹅人关联':'Gotham Harbor smuggling case / Penguin link',
+'威胁等级':'Threat Level','巴别塔计划 / BABEL':'Project BABEL','待处理案件 / CASES':'OPEN CASES',
+'接入 (ACCEPT)':'Accept (ACCEPT)','拒绝 (REJECT)':'Reject (REJECT)',
+'按 ENTER 键启动身份验证程序':'Press ENTER to start identity verification',
+'核心状态 / CORE STATUS':'CORE STATUS','欢迎回来，':'Welcome back, ',
+'正在下载阿卡姆疯人院机密档案...':'Downloading Arkham Asylum classified files...',
+'正在扫描生物特征...':'Scanning biometric signature...',
+'确认并进入系统':'Confirm & Enter System','系统日志 / SYSTEM LOG':'SYSTEM LOG',
+'系统负载':'System Load','解析完成。':'Decryption complete.',
+'货物藏匿于 45 号码头 7 号仓库地下。':'Cargo hidden beneath Warehouse 7, Pier 45.',
+'身份识别：戈登局长':'Identified: Commissioner Gordon','身份验证通过':'Identity verified',
+'输入系统密码后按回车':'Enter system password and press Enter',
+'连按两次 [ ESC ] 强制退出':'Press [ ESC ] twice to force quit',
+'连接节点':'Connected Nodes','需二次授权进入系统':'Secondary authorization required',
+'输入指令 (输入 help 查看)':'Enter command (type help for list)','输入系统密码':'Enter system password',
+'语言 / Language':'Language','只读':'Read-only',
+'PRIVATE':'PRIVATE','RESTRICTED':'RESTRICTED','TEAM':'TEAM','OMEGA':'OMEGA','ALPHA':'ALPHA','LIMITED':'LIMITED',
+'输入识别码':'Enter identcode'
+});
+/* 数据代码与新增键的德语 */
+Object.assign(DICT_DE,{
+'PRIVATE':'PRIVAT','RESTRICTED':'GESPERRT','TEAM':'TEAM','OMEGA':'OMEGA','ALPHA':'ALPHA','LIMITED':'LIMITIERT',
+'整理卷宗':'Ordnet Fallakten','监听频道':'Überwacht Kanäle'
+});
+/* 前缀键（长键优先），用于 “PERSONAL FILE / …” 这类带变量的标签 */
+let DE_PREFIX=null;
+function dePrefix(){
+ if(DE_PREFIX)return DE_PREFIX;
+ DE_PREFIX=[];
+ Object.keys(DE_EN).forEach(function(k){
+  const t=k.trim();
+  if(/[\/:]$/.test(t))DE_PREFIX.push(k);
+ });
+ DE_PREFIX.sort(function(a,b){return b.length-a.length});
+ return DE_PREFIX;
+}
+/* 英文串 → 德语；先整串，再前缀。未收录返回 null */
+function deLookup(s){
+ if(s==null)return null;
+ const k=String(s).trim();
+ if(!k)return null;
+ if(DE_EN[k]!=null)return DE_EN[k];
+ const pre=dePrefix();
+ for(let i=0;i<pre.length;i++){
+  const p=pre[i].trim();
+  if(k.indexOf(p)===0)return DE_EN[pre[i]]+k.slice(p.length);
+ }
+ return null;
+}
+
+function dictOf(s){
+ if(s==null)return s;
+ if(LANG==='de'){const d=DICT_DE[s];return d!==undefined?d:DICT[s]}
+ return DICT[s];
+}
+function t(s){
+ if(LANG==='zh'||s==null)return s;
+ const v=dictOf(s);return v!==undefined?v:s;
+}
+function tl(s){const v=dictOf(s);return (LANG==='en'||LANG==='de')&&v!==undefined?v:s}
 /* 分段控件用短标签，避免英文撑宽表格列 */
 const TASK_STATUS_EN={'待处理':'Pending','进行中':'Active','已完成':'Done','受限':'Restricted'};
-function taskSegLabel(s){return LANG==='en'?(TASK_STATUS_EN[s]||s):s}
+const TASK_STATUS_DE={'待处理':'Offen','进行中':'Aktiv','已完成':'Fertig','受限':'Gesperrt'};
+function taskSegLabel(s){
+ if(LANG==='en')return TASK_STATUS_EN[s]||s;
+ if(LANG==='de')return TASK_STATUS_DE[s]||s;
+ return s;
+}
 let DICT_RE=null;
 function translateText(s){
- if(LANG!=='en')return s;
- if(!DICT_RE){DICT_RE=new RegExp('('+Object.keys(DICT).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).sort((a,b)=>b.length-a.length).join('|')+')','g')}
- return s.replace(DICT_RE,m=>DICT[m]);
+ if(LANG==='zh'||s==null)return s;
+ if(!DICT_RE){
+  const keys=Object.keys(DICT).concat(Object.keys(DICT_DE));
+  DICT_RE=new RegExp('('+keys.map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).sort((a,b)=>b.length-a.length).join('|')+')','g');
+ }
+ /* 查不到译文时保留原文，绝不能返回 undefined（否则文本里会出现字面 "undefined"） */
+ return s.replace(DICT_RE,m=>{const v=dictOf(m);return v==null?m:v});
 }
 const TR_ATTRS=['title','placeholder','aria-label','alt','data-text'];
-function translateDOM(root){
- if(!root||LANG!=='en')return;
+/* 记录原文，切换语言时可还原（登录页这种不重绘的静态 DOM 必须能还原） */
+const TR_ORIG_TEXT=new WeakMap();
+const TR_ORIG_ATTR=new WeakMap();
+function _trSaveText(n){if(!TR_ORIG_TEXT.has(n))TR_ORIG_TEXT.set(n,n.nodeValue)}
+function _trSaveAttr(el,k,v){
+ let m=TR_ORIG_ATTR.get(el);
+ if(!m){m={};TR_ORIG_ATTR.set(el,m)}
+ if(m[k]==null)m[k]=v;
+}
+function _trKeepSpace(oldV){return {lead:(oldV.match(/^\s*/)||[''])[0],tail:(oldV.match(/\s*$/)||[''])[0]}}
+function restoreDOM(root){
+ if(!root)return;
  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
- let n;while(n=w.nextNode()){if(n.nodeValue&&/[\u4e00-\u9fff]/.test(n.nodeValue))n.nodeValue=translateText(n.nodeValue)}
+ let n;while(n=w.nextNode()){const o=TR_ORIG_TEXT.get(n);if(o!=null){n.nodeValue=o;TR_ORIG_TEXT.delete(n)}}
+ let els=[];try{els=root.querySelectorAll?[...root.querySelectorAll('*')]:[]}catch(e){els=[]}
+ for(let i=0;i<els.length;i++){
+  const m=TR_ORIG_ATTR.get(els[i]);if(!m)continue;
+  Object.keys(m).forEach(k=>{try{els[i].setAttribute(k,m[k])}catch(e){}});
+  TR_ORIG_ATTR.delete(els[i]);
+ }
+}
+function translateDOM(root){
+ if(!root||LANG==='zh')return;
+ const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ let n;
+ while(n=w.nextNode()){
+  const v=n.nodeValue;
+  if(!v)continue;
+  if(/[\u4e00-\u9fff]/.test(v)){_trSaveText(n);n.nodeValue=translateText(v)}
+ }
  let els=[];
  try{els=root.querySelectorAll?[...root.querySelectorAll('*')]:[]}catch(e){els=[]}
  for(let i=0;i<els.length;i++){
@@ -4899,24 +5525,53 @@ function translateDOM(root){
   for(let a=0;a<TR_ATTRS.length;a++){
    const k=TR_ATTRS[a];
    const v=el.getAttribute&&el.getAttribute(k);
-   if(v&&/[\u4e00-\u9fff]/.test(v)){try{el.setAttribute(k,translateText(v))}catch(e){}}
+   if(v&&/[\u4e00-\u9fff]/.test(v)){_trSaveAttr(el,k,v);try{el.setAttribute(k,translateText(v))}catch(e){}}
+  }
+ }
+ if(LANG!=='de')return;
+ /* 德语：把硬编码英文标签也换掉（面板标题 / 页眉 / 按钮 / 登录页外壳） */
+ const w2=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ while(n=w2.nextNode()){
+  const v=n.nodeValue;
+  if(!v||v.length>180)continue;
+  if(/[\u4e00-\u9fff]/.test(v))continue;
+  if(!/[A-Za-z]{2}/.test(v))continue;
+  const d=deLookup(v);
+  if(d==null)continue;
+  const sp=_trKeepSpace(v);
+  _trSaveText(n);
+  n.nodeValue=sp.lead+d+sp.tail;
+ }
+ for(let i=0;i<els.length;i++){
+  const el=els[i];
+  for(let a=0;a<TR_ATTRS.length;a++){
+   const k=TR_ATTRS[a];
+   const v=el.getAttribute&&el.getAttribute(k);
+   if(!v||/[\u4e00-\u9fff]/.test(v))continue;
+   const d=deLookup(v);
+   if(d==null)continue;
+   _trSaveAttr(el,k,v);
+   try{el.setAttribute(k,d)}catch(e){}
   }
  }
 }
 function toggleLang(){
- LANG=LANG==='zh'?'en':'zh';
+ LANG=LANG==='zh'?'en':LANG==='en'?'de':'zh';
  try{localStorage.setItem('batcomputer_lang_v2',LANG)}catch(e){}
  applyLang();
 }
 function applyLang(withRender=true){
  const seg=document.getElementById('langToggle');
  if(seg&&seg._rsSelect)seg._rsSelect(LANG);
- const lbl={switchUser:['切换身份','Switch User']};
- Object.keys(lbl).forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=LANG==='zh'?lbl[id][0]:lbl[id][1]});
+ const lbl={switchUser:['切换身份','Switch User','Identität wechseln']};
+ Object.keys(lbl).forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=LANG==='zh'?lbl[id][0]:LANG==='en'?lbl[id][1]:lbl[id][2]});
  const pb=document.getElementById('photoBtn');
- if(pb){pb.textContent=LANG==='zh'?'照片':'Photos';try{pb.setAttribute('title',LANG==='zh'?'更换所有照片（本地上传）':'Replace photos (local upload)')}catch(e){}}
+ if(pb){pb.textContent=PL('照片','Photos','Fotos');try{pb.setAttribute('title',PL('更换所有照片（本地上传）','Replace photos (local upload)','Alle Fotos ersetzen (lokaler Upload)'))}catch(e){}}
  if(document.getElementById('photoManagerGrid')){try{photoManager()}catch(e){}}
  if(withRender&&document.getElementById('app')&&!document.getElementById('app').classList.contains('hidden'))render();
+ try{document.documentElement.setAttribute('lang',LANG==='zh'?'zh-CN':LANG==='de'?'de':'en')}catch(e){}
+ /* 登录页是静态 DOM，不随 render 重建：先还原原文，再按当前语言重译 */
+ try{const _boot=document.getElementById('boot');if(_boot){restoreDOM(_boot);if(LANG!=='zh')translateDOM(_boot)}}catch(e){}
  try{document.dispatchEvent(new CustomEvent('bc:lang'))}catch(e){}
 }
 document.addEventListener('rb:change',function(e){
@@ -4927,7 +5582,7 @@ document.addEventListener('rb:change',function(e){
 });
 const _langBtn=document.getElementById('langBtn');
 if(_langBtn)_langBtn.onclick=toggleLang;
-if(LANG==='en')applyLang(false);
+if(LANG!=='zh')applyLang(false);
 
 /* =========================================================
    MEMBER HOLOGRAM — 成员全息投影（Three.js · 可拖拽）
@@ -5035,7 +5690,7 @@ function personnel(){
   </div>`;
  const back=`<div class="fc-face-pad fc-back">
    <div class="eyebrow">IDENTITY SHEET / ${esc(m.en)}</div>
-   <div class="detail-block"><h4>IDENTITY / 身份摘要</h4><p>${esc(m.bio)}</p></div>
+   <div class="detail-block"><h4>${PL('身份摘要','IDENTITY / Identity','IDENTITÄT / Identität')}</h4><p>${esc(m.bio)}</p></div>
    <div class="detail-block"><h4>OPERATIONAL SPECIALTY / 专长</h4>
     <div class="kv">
      <div><small>PRIMARY FUNCTION</small><b>${esc(m.special)}</b></div>
@@ -5462,7 +6117,7 @@ function communications(){
     </div>
     <div class="chat-sig">
      ${latticeHTML({label:'NODES SYNCED',doneLabel:'SYNCED',errorLabel:'LOST',grid:3,cell:4,gap:2,font:9,pattern:'orbit3',step:110})}
-     <span class="mono cyan" style="font-size:9px;letter-spacing:1px;opacity:.8"><i class="online-dot"></i>${total} CHANNEL LINK</span>
+     <span class="mono cyan" style="font-size:9px;letter-spacing:1px;opacity:.8"><i class="online-dot"></i>${total} ${PL('条信道链路','CHANNEL LINK','KANAL-LINK')}</span>
     </div>
    </div>
 
@@ -5646,14 +6301,14 @@ function todoProgress(){const l=todoList();return l.filter(x=>x.done).length+'/'
 function escRaw(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function todoPanelHTML(){
  const list=todoList();
- return `<div class="todo-panel mb-content"><div class="panel-title">CHECKLIST <span>待办事项</span><b class="todo-count" id="todoCount">${todoProgress()}</b></div>
+ return `<div class="todo-panel mb-content"><div class="panel-title">CHECKLIST <span>${PL('待办事项','To-dos','To-dos')}</span><b class="todo-count" id="todoCount">${todoProgress()}</b></div>
   <div class="todo-list">${list.length?list.map(td=>{
    const mem=members[td.member];
    return `<div class="todo-row" data-todo-row="${td.id}">${springCheckHTML(td.id,td.text,!!td.done,MEM_COLOR[td.member]||'var(--accent)',{box:26,radius:8,font:15,done:.42,lag:.12})}
     <span class="todo-who">${esc(mem?mem.en:'—')}</span>
-    <span class="todo-acts"><button class="ghost sm" onclick="todoEdit('${td.id}')">编辑</button>${holdBtn({action:'deleteTodo',arg:td.id,label:'删除',done:'已删除',size:'xs'})}</span></div>`;
-  }).join(''):'<div class="todo-empty">暂无待办 · 在上方输入框添加</div>'}</div>
-  <form class="todo-add-row" onsubmit="event.preventDefault();todoQuickAdd()"><input id="todoInput" type="text" placeholder="添加一条待办…" autocomplete="off"><button class="ghost sm" type="submit">添加</button></form>
+    <span class="todo-acts"><button class="ghost sm" onclick="todoEdit('${td.id}')">${PL('编辑','Edit','Bearbeiten')}</button>${holdBtn({action:'deleteTodo',arg:td.id,label:PL('删除','Delete','Löschen'),done:PL('已删除','Deleted','Gelöscht'),size:'xs'})}</span></div>`;
+  }).join(''):'<div class="todo-empty">'+PL('暂无待办 · 在上方输入框添加','No to-dos yet · add one in the field above','Keine To-dos · oben im Feld hinzufügen')+'</div>'}</div>
+  <form class="todo-add-row" onsubmit="event.preventDefault();todoQuickAdd()"><input id="todoInput" type="text" placeholder="${PL('添加一条待办…','Add a to-do…','To-do hinzufügen…')}" autocomplete="off"><button class="ghost sm" type="submit">${PL('添加','Add','Hinzufügen')}</button></form>
   <div id="dashMusicSlot" class="dash-music-slot"></div>
  </div>`;
 }
@@ -6313,6 +6968,9 @@ document.getElementById('switchUser').onclick = resetToBoot;
    ========================================================= */
 (function(){
 'use strict';
+
+/* 语言代理：主应用会把 window.PL 挂上，RB 组件也能取到当前语言 */
+const PL=(zh,en,de)=>{try{return window.PL?window.PL(zh,en,de):(en==null?zh:en)}catch(e){return zh}};
 
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const easeOut=t=>1-Math.pow(1-t,3);
@@ -7376,7 +8034,7 @@ function accordionHTML(items, opt) {
       (i === di ? ' aria-current="true"' : '') + '>' +
 '<span class="ag-media"' + (it.key ? ' data-photo-key="' + it.key + '" data-photo-kind="bg"' : '') +
       ' style="background-image:url(' + it.image + ')"></span>' +
-      (it.key ? '<span class="photo-edit" role="button" tabindex="0" onclick="event.stopPropagation();event.preventDefault();photoPick(\'' + it.key + '\')">更换图片</span>' : '') +
+      (it.key ? '<span class="photo-edit" role="button" tabindex="0" onclick="event.stopPropagation();event.preventDefault();photoPick(\'' + it.key + '\')">' + (o.photoLabel || '更换图片') + '</span>' : '') +
       '<span class="ag-shade"></span>' +
       '<span class="ag-count">' + it.count + '<small>' + (it.unit || 'ENTRIES') + '</small></span>' +
       '<span class="ag-spine"><b>' + it.code + '</b><i>' + it.title + '</i></span>' +
@@ -7579,21 +8237,21 @@ var MU_SVG={
  shuffle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.8-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>'
 };
 function modeIcon(){return MU_SVG[MODE]||MU_SVG.loop}
-function modeName(){return MODE==='loop'?PL('列表循环','Loop all'):MODE==='one'?PL('单曲循环','Repeat one'):PL('随机播放','Shuffle')}
+function modeName(){return MODE==='loop'?PL('列表循环','Loop all','Alle wiederholen'):MODE==='one'?PL('单曲循环','Repeat one','Titel wiederholen'):PL('随机播放','Shuffle','Zufallswiedergabe')}
 dock.innerHTML=
  '<div class="mu-row1">'
- +'<button class="mu-ctl" onclick="musicPrev()" title="'+PL('上一首','Previous')+'">&#9199;</button>'
- +'<button class="mu-play" id="muPlayBtn" onclick="musicToggle()" title="'+PL('播放 / 暂停','Play / Pause')+'">&#9654;</button>'
- +'<button class="mu-ctl" onclick="musicNext()" title="'+PL('下一首','Next')+'">&#9197;</button>'
- +'<div class="mu-info" onclick="musicModal()" title="'+PL('打开音乐面板','Open music panel')+'">'
- +'<span class="mu-title" id="muTitle">'+PL('♪ 背景音乐','♪ Background music')+'</span>'
- +'<span class="mu-sub" id="muSub">'+PL('点这里导入网易云歌单','Click to import a NetEase playlist')+'</span>'
+ +'<button class="mu-ctl" onclick="musicPrev()" title="'+PL('上一首','Previous','Vorheriger Titel')+'">&#9199;</button>'
+ +'<button class="mu-play" id="muPlayBtn" onclick="musicToggle()" title="'+PL('播放 / 暂停','Play / Pause','Wiedergabe / Pause')+'">&#9654;</button>'
+ +'<button class="mu-ctl" onclick="musicNext()" title="'+PL('下一首','Next','Nächster Titel')+'">&#9197;</button>'
+ +'<div class="mu-info" onclick="musicModal()" title="'+PL('打开音乐面板','Open music panel','Musikplayer öffnen')+'">'
+ +'<span class="mu-title" id="muTitle">'+PL('♪ 背景音乐','♪ Background music','♪ Hintergrundmusik')+'</span>'
+ +'<span class="mu-sub" id="muSub">'+PL('点这里导入网易云歌单','Click to import a NetEase playlist','Klicken, um eine Playlist zu importieren')+'</span>'
  +'</div>'
  +'<button class="mu-ctl" id="muModeBtn" onclick="musicMode()" title="'+modeName()+'">'+modeIcon()+'</button>'
- +'<div class="mu-eslot" id="muVolSlot" title="'+PL('音量','Volume')+'"></div>'
+ +'<div class="mu-eslot" id="muVolSlot" title="'+PL('音量','Volume','Lautstärke')+'"></div>'
  +'</div>'
  +'<div class="mu-row2">'
- +'<span class="mu-eslot mu-seekslot" id="muSeekSlot" title="'+PL('拖动调整进度','Drag to seek')+'"></span>'
+ +'<span class="mu-eslot mu-seekslot" id="muSeekSlot" title="'+PL('拖动调整进度','Drag to seek','Zum Spulen ziehen')+'"></span>'
  +'<span class="mu-time" id="muTime">0:00 / 0:00</span>'
  +'</div>';
 document.body.appendChild(dock);
@@ -7607,7 +8265,7 @@ function mountMuVol(){
  try{
   window.initElasticSlider(slot,{
    value:45,leftIcon:'\uD83D\uDD08',rightIcon:'\uD83D\uDD0A',
-   ariaLabel:PL('音量','Volume'),
+   ariaLabel:PL('音量','Volume','Lautstärke'),
    onChange:function(v){window.musicVol(v)},
    onChangeEnd:function(v){window.musicVol(v)}
   });
@@ -7622,7 +8280,7 @@ function mountMuSeek(){
  try{
   window.initElasticSlider(slot,{
    value:0,maxValue:100,leftIcon:'',rightIcon:'',
-   ariaLabel:PL('播放进度','Playback progress'),
+   ariaLabel:PL('播放进度','Playback progress','Wiedergabefortschritt'),
    formatValue:function(v){
     var d=audio.duration||0;
     if(!d||!isFinite(d))return Math.round(v)+'%';
@@ -7639,8 +8297,8 @@ window.musicMountVol=mountMuVol;
 function updateDock(){
  var t=cur();
  var ti=el('muTitle'),su=el('muSub');
- if(ti)ti.textContent=t?t.name:PL('♪ 背景音乐','♪ Background music');
- if(su)su.textContent=t?(t.artist||''):PL('点这里导入网易云歌单','Click to import a NetEase playlist');
+ if(ti)ti.textContent=t?t.name:PL('♪ 背景音乐','♪ Background music','♪ Hintergrundmusik');
+ if(su)su.textContent=t?(t.artist||''):PL('点这里导入网易云歌单','Click to import a NetEase playlist','Klicken, um eine Playlist zu importieren');
 }
 function syncPlayBtn(){
  var b=el('muPlayBtn');if(!b)return;
@@ -7685,7 +8343,7 @@ window.musicMode=function(){
 
 window.musicVol=function(v){audio.volume=Math.min(1,Math.max(0,Number(v)||0)/100)};
 window.musicToggle=function(){
- if(!M.list.length){toast(PL('歌单是空的：点右侧文字打开音乐面板','Playlist is empty: click the text to open the music panel'));return}
+ if(!M.list.length){toast(PL('歌单是空的：点右侧文字打开音乐面板','Playlist is empty: click the text to open the music panel','Playlist ist leer: rechts auf den Text tippen, um den Player zu öffnen'));return}
  if(M.cur<0){playAt(0);return}
  if(audio.paused){audio.play().catch(function(){toast(PL('播放被浏览器拦截，请再点一次','Playback blocked by the browser, click again'))})}
  else audio.pause();
@@ -7757,7 +8415,7 @@ window.musicLoadDefault=function(silent){
   var n=mergeTracks(list,url);
   save();updateDock();
   if(el('muList'))window.musicModal();
-  if(!silent)toast(n?PL('已从 playlist.json 载入 '+n+' 首','Loaded '+n+' tracks from playlist.json'):PL('playlist.json 中没有新曲目','No new tracks in playlist.json'));
+  if(!silent)toast(n?PL('已从 playlist.json 载入 '+n+' 首','Loaded '+n+' tracks from playlist.json','Aus playlist.json '+n+' Titel geladen'):PL('playlist.json 中没有新曲目','No new tracks in playlist.json'));
   return n;
  }).catch(function(e){
   if(!silent)toast(PL('没读到同目录的 playlist.json（需与网页放在一起）','Could not read playlist.json next to this page'));
@@ -7771,7 +8429,7 @@ window.musicImportPlaylist=function(){
  var elx=el('muInputPlaylist');var raw=elx?elx.value.trim():'';
  if(!raw){toast(PL('先粘贴歌单链接或 ID','Paste a playlist link or ID first'));return}
  var id=parseId(raw);if(!id){toast(PL('没认出歌单 ID','Cannot find the playlist ID'));return}
- toast(PL('正在从网易云导入歌单 '+id+' …','Importing playlist '+id+' from NetEase …'));
+ toast(PL('正在从网易云导入歌单 '+id+' …','Importing playlist '+id+' from NetEase …','Playlist '+id+' wird von NetEase importiert …'));
  var apis=['https://api.injahow.cn/meting/?type=playlist&id=','https://api.wuenci.com/meting/api/?type=playlist&id='];
  (function tryAt(k){
   if(k>=apis.length){toast(PL('导入失败：接口暂时不可用，可稍后重试或手动添加单曲','Import failed: API unavailable, retry later or add songs manually'));return}
@@ -7785,7 +8443,7 @@ window.musicImportPlaylist=function(){
    });
    if(!n)throw 0;
    save();updateDock();
-   toast(PL('已导入 '+n+' 首，点 ▶ 开始播放','Imported '+n+' tracks, press ▶ to play'));
+   toast(PL('已导入 '+n+' 首，点 ▶ 开始播放','Imported '+n+' tracks, press ▶ to play','Importiert: '+n+' Titel — ▶ zum Abspielen'));
    if(el('muList'))window.musicModal();
   }).catch(function(){tryAt(k+1)});
  })(0);
@@ -7809,7 +8467,7 @@ window.musicPickFiles=function(files){
    M.list.push({name:String(f.name||'track').replace(/\.[^.]+$/,''),artist:PL('本地文件','Local file'),url:'',pic:'',local:true,id:key});
    added++;save();updateDock();
    pending--;
-   if(pending===0){toast(PL('已添加 '+added+' 首本地音乐','Added '+added+' local tracks'));if(el('muList'))window.musicModal()}
+   if(pending===0){toast(PL('已添加 '+added+' 首本地音乐','Added '+added+' local tracks','Lokale Titel hinzugefügt: '+added));if(el('muList'))window.musicModal()}
   });
  });
 };
@@ -7830,7 +8488,7 @@ window.musicClear=function(){
  M.list=[];M.cur=-1;audio.pause();try{audio.removeAttribute('src')}catch(e){}
  save();updateDock();syncPlayBtn();
  if(el('muList'))window.musicModal();
- toast(PL('已清空 '+n+' 首','Cleared '+n+' tracks'));
+ toast(PL('已清空 '+n+' 首','Cleared '+n+' tracks',n+' Titel entfernt'));
 };
 
 /* ---- 面板 ---- */
@@ -7845,26 +8503,26 @@ window.musicModal=function(){
  }).join('')||'<div class="mu-empty">'+PL('还没有曲目：把 playlist.json 放在网页同目录会自动载入，也可粘贴链接或上传本地音乐','No tracks yet: put playlist.json next to this page to auto-load, or paste a link / upload local music')+'</div>';
  showModal(
   '<div class="mu-modal">'
-  +'<h3>'+PL('&#9834; 背景音乐','&#9834; Background Music')+'</h3>'
-  +'<p class="mu-hint">'+PL('粘贴歌单或单曲链接（music.163.com 链接或纯数字 ID）；本地音乐保存在浏览器里，下次打开还在。','Paste a playlist or song link (music.163.com link or numeric ID); local music is stored in your browser and survives reloads.')+'</p>'
+  +'<h3>'+PL('&#9834; 背景音乐','&#9834; Background Music','&#9834; Hintergrundmusik')+'</h3>'
+  +'<p class="mu-hint">'+PL('粘贴歌单或单曲链接（music.163.com 链接或纯数字 ID）；本地音乐保存在浏览器里，下次打开还在。','Paste a playlist or song link (music.163.com link or numeric ID); local music is stored in your browser and survives reloads.','Playlist- oder Titel-Link einfügen (music.163.com oder reine ID). Lokale Dateien bleiben im Browser gespeichert.')+'</p>'
   +'<div class="mu-form">'
-  +'<button class="ghost sm" onclick="musicPrev()" title="'+PL('上一首','Previous')+'">&#9199;</button>'
-  +'<button class="ghost sm" onclick="musicToggle()" title="'+PL('播放 / 暂停','Play / Pause')+'">&#9654;</button>'
-  +'<button class="ghost sm" onclick="musicNext()" title="'+PL('下一首','Next')+'">&#9197;</button>'
+  +'<button class="ghost sm" onclick="musicPrev()" title="'+PL('上一首','Previous','Vorheriger Titel')+'">&#9199;</button>'
+  +'<button class="ghost sm" onclick="musicToggle()" title="'+PL('播放 / 暂停','Play / Pause','Wiedergabe / Pause')+'">&#9654;</button>'
+  +'<button class="ghost sm" onclick="musicNext()" title="'+PL('下一首','Next','Nächster Titel')+'">&#9197;</button>'
   +'<button class="ghost sm" onclick="musicMode()">'+modeIcon()+' '+modeName()+'</button>'
   +'</div>'
   +'<div class="mu-row2" style="margin-bottom:10px">'
-  +'<input class="mu-seek" id="muSeek2" type="range" min="0" max="100" step="0.1" value="0" title="'+PL('拖动调整进度','Drag to seek')+'" oninput="musicSeek(this.value)" onpointerdown="this.__drag=1" onpointerup="this.__drag=0">'
+  +'<input class="mu-seek" id="muSeek2" type="range" min="0" max="100" step="0.1" value="0" title="'+PL('拖动调整进度','Drag to seek','Zum Spulen ziehen')+'" oninput="musicSeek(this.value)" onpointerdown="this.__drag=1" onpointerup="this.__drag=0">'
   +'<span class="mu-time" id="muTime2">0:00 / 0:00</span>'
   +'</div>'
-  +'<div class="mu-form"><input id="muInputPlaylist" placeholder="'+PL('歌单链接或 ID，如 playlist?id=8888888','playlist link or ID, e.g. playlist?id=8888888')+'"><button class="ghost sm" onclick="musicImportPlaylist()">'+PL('导入歌单','Import playlist')+'</button></div>'
-  +'<div class="mu-form"><input id="muInputSong" placeholder="'+PL('单曲链接或 ID，如 song?id=347230','song link or ID, e.g. song?id=347230')+'"><button class="ghost sm" onclick="musicAddSong()">'+PL('添加单曲','Add song')+'</button></div>'
-  +'<div class="mu-form"><button class="ghost sm" onclick="musicLoadDefault()">'+PL('载入 playlist.json','Load playlist.json')+'</button>'
-  +'<button class="ghost sm" onclick="document.getElementById(\'muFile\').click()">'+PL('上传本地音乐','Upload local music')+'</button>'
+  +'<div class="mu-form"><input id="muInputPlaylist" placeholder="'+PL('歌单链接或 ID，如 playlist?id=8888888','playlist link or ID, e.g. playlist?id=8888888','Playlist-Link oder ID, z. B. playlist?id=8888888')+'"><button class="ghost sm" onclick="musicImportPlaylist()">'+PL('导入歌单','Import playlist','Playlist importieren')+'</button></div>'
+  +'<div class="mu-form"><input id="muInputSong" placeholder="'+PL('单曲链接或 ID，如 song?id=347230','song link or ID, e.g. song?id=347230','Titel-Link oder ID, z. B. song?id=347230')+'"><button class="ghost sm" onclick="musicAddSong()">'+PL('添加单曲','Add song','Titel hinzufügen')+'</button></div>'
+  +'<div class="mu-form"><button class="ghost sm" onclick="musicLoadDefault()">'+PL('载入 playlist.json','Load playlist.json','playlist.json laden')+'</button>'
+  +'<button class="ghost sm" onclick="document.getElementById(\'muFile\').click()">'+PL('上传本地音乐','Upload local music','Lokale Musik hochladen')+'</button>'
   +'<input id="muFile" type="file" accept="audio/*" multiple style="display:none" onchange="musicPickFiles(this.files);this.value=\'\'">'
-  +(M.list.length?'<button class="ghost sm red" onclick="musicClear()">'+PL('清空歌单','Clear all')+'</button>':'')+'</div>'
+  +(M.list.length?'<button class="ghost sm red" onclick="musicClear()">'+PL('清空歌单','Clear all','Playlist leeren')+'</button>':'')+'</div>'
   +'<div class="mu-list" id="muList">'+rows+'</div>'
-  +'<div style="text-align:right;margin-top:10px"><button class="ghost sm" onclick="closeModal()">'+PL('完成','Done')+'</button></div>'
+  +'<div style="text-align:right;margin-top:10px"><button class="ghost sm" onclick="closeModal()">'+PL('完成','Done','Fertig')+'</button></div>'
   +'</div>');
 };
 
